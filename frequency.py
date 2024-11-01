@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import streamlit as st
 from scipy import integrate
 from scipy import interpolate
@@ -90,13 +91,12 @@ def orbital_dist_pl(a):
 # mass function ranges are given in Jupiter masses, but passed in q (which depends on host star mass)
 # orbital distributions are given in AU. 
 
-f_bd = (integrate.quad(mass_fctn_bd, (Jup_min/q_Jupiter), (Jup_max/q_Jupiter))[0]*integrate.quad(orbital_dist_bd,a_min,a_max)[0])
+f_bd = (integrate.quad(mass_fctn_bd, (np.log10(Jup_min/q_Jupiter)), (np.log10(Jup_max/q_Jupiter)))[0]*integrate.quad(orbital_dist_bd,a_min,a_max)[0])
 
-f_pl = (integrate.quad(mass_fctn_pl, (Jup_min/q_Jupiter), (Jup_max/q_Jupiter))[0]*integrate.quad(orbital_dist_pl,a_min,a_max)[0])
+f_pl = (integrate.quad(mass_fctn_pl, (np.log10(Jup_min/q_Jupiter)), (np.log10(Jup_max/q_Jupiter)))[0]*integrate.quad(orbital_dist_pl,a_min,a_max)[0])
 
 #Output is the mean number of companions per star for the brown dwarf component (f_ bd) and planet part (f_pl).
 
 print(f_bd,f_pl)
 st.text("Frequency of Brown Dwarfs: {}".format(f_bd))
 st.text("Frequency of Planets: {}".format(f_pl))
-
