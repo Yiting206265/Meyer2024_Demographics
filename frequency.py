@@ -68,13 +68,13 @@ st.write(r"$\mu_{bd}$:", mean_bd)
 # User input parameter host_mass in Solar masses, companion mass range of interest in Jupiter masses (min, max) 
 # and orbital range of interest in AU (min, max) 
 
-host_mass = st.number_input("Host Mass ($\mathrm{M_{\odot}}$)", 1, None, step=None, format=None, key=None)
-Jup_min = st.number_input("Companion Minimum Mass ($\mathrm{M_{Jup}}$)", 1, None, step=None, format=None, key=None)
-Jup_max = st.number_input("Companion Maximum Mass ($\mathrm{M_{Jup}}$)", 75, None, step=None, format=None, key=None)
+host_mass = st.number_input("Host Mass ($\mathrm{M_{\odot}}$)", 0.01, None, step=None, format=None, key=None)
+Jup_min = st.number_input("Companion Minimum Mass ($\mathrm{M_{Jup}}$)", 0.01, None, step=None, format=None, key=None)
+Jup_max = st.number_input("Companion Maximum Mass ($\mathrm{M_{Jup}}$)", 0.01, None, step=None, format=None, key=None)
 q_Jupiter = 0.001/host_mass # Msun
 
-a_min = st.number_input("Orbital Minimum Separation (AU)", 5, None, step=None, format=None, key=None)
-a_max = st.number_input("Orbital Maximum Separation (AU)", 300, None, step=None, format=None, key=None)
+a_min = st.number_input("Orbital Minimum Separation (AU)", 0.01, None, step=None, format=None, key=None)
+a_max = st.number_input("Orbital Maximum Separation (AU)", 0.01, None, step=None, format=None, key=None)
 
 # Defining the functions for mass and orbital separation distibutions for both brown dwarf and planets 
 
