@@ -81,7 +81,7 @@ a_max = st.number_input("Orbital Maximum Separation (AU)", 0.01, None, step=None
 def mass_fctn_bd(q):
     return q**(beta)#dq
 def orbital_dist_bd(a):
-    return (A_bd*np.exp((-(np.log10(a)-(mean_bd))**2.)/(2.*sigma_bd**2.)))/(np.sqrt(2.0*np.pi)*sigma_bd)#da
+    return (A_bd*np.exp((-(np.log10(a)-(mean_bd))**2.)/(2.*sigma_bd**2.)))/(2.0*np.pi*sigma_bd*a)#da
 def mass_fctn_pl(q):
     return q**(-alpha_pl)#dm
 def orbital_dist_pl(a):
