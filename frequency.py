@@ -68,34 +68,36 @@ st.write(r"$\mu_{bd}$:", mean_bd)
 # User input parameter host_mass in Solar masses, companion mass range of interest in Jupiter masses (min, max) 
 # and orbital range of interest in AU (min, max) 
 
-host_mass = st.number_input("Host Mass ($\mathrm{M_{\odot}}$)", 0.01, None, step=None, format=None, key=None)
-Jup_min = st.number_input("Companion Minimum Mass ($\mathrm{M_{Jup}}$)", 0.01, None, step=None, format=None, key=None)
-Jup_max = st.number_input("Companion Maximum Mass ($\mathrm{M_{Jup}}$)", 0.01, None, step=None, format=None, key=None)
-q_Jupiter = 0.001*host_mass # Msun
+host_mass = st.number_input("Host Mass ($\mathrm{M_{\odot}}$)", 1, None, step=None, format=None, key=None)
+Jup_min = st.number_input("Companion Minimum Mass ($\mathrm{M_{Jup}}$)", 1, None, step=None, format=None, key=None)
+Jup_max = st.number_input("Companion Maximum Mass ($\mathrm{M_{Jup}}$)", 75, None, step=None, format=None, key=None)
+q_Jupiter = 0.001/host_mass # Msun
 
-a_min = st.number_input("Orbital Minimum Separation (AU)", 0.01, None, step=None, format=None, key=None)
-a_max = st.number_input("Orbital Maximum Separation (AU)", 0.01, None, step=None, format=None, key=None)
+a_min = st.number_input("Orbital Minimum Separation (AU)", 5, None, step=None, format=None, key=None)
+a_max = st.number_input("Orbital Maximum Separation (AU)", 300, None, step=None, format=None, key=None)
 
 # Defining the functions for mass and orbital separation distibutions for both brown dwarf and planets 
 
 def mass_fctn_bd(q):
-    return (np.log10(q)**(beta))#dq
+    return q**(beta)#dq
 def orbital_dist_bd(a):
-    return (A_bd*np.exp((-(np.log10(a)-(mean_bd))**2.)/(2.*sigma_bd**2.)))/(2.0*np.pi*sigma_bd*a)#da
+    return (A_bd*np.exp((-(np.log10(a)-(mean_bd))**2.)/(2.*sigma_bd**2.)))/(np.sqrt(2.0*np.pi)*sigma_bd)#da
 def mass_fctn_pl(q):
-    return (np.log10(q)**(-alpha_pl))#dm
+    return q**(-alpha_pl)#dm
 def orbital_dist_pl(a):
-     return (A_pl/(2*np.pi*sigma_pl*a))*np.exp((-(np.log10(a)-(mu_pl))**2.)/(2.*sigma_pl**2.))#da
+     return (A_pl*np.exp((-(np.log10(a)-(mu_pl))**2.)/(2.*sigma_pl**2.)))/(2.0*np.pi*sigma_pl*a)#da
 
 # mass function ranges are given in Jupiter masses, but passed in q (which depends on host star mass)
 # orbital distributions are given in AU. 
+# st.text( np.log10(Jup_min*q_Jupiter))
+f_bd = (integrate.quad(mass_fctn_bd, (Jup_min*q_Jupiter), (Jup_max*q_Jupiter))[0]*integrate.quad(orbital_dist_bd,a_min,a_max)[0])
 
-f_bd = (integrate.quad(mass_fctn_bd, (np.log10(Jup_min/q_Jupiter)), (np.log10(Jup_max/q_Jupiter)))[0]*integrate.quad(orbital_dist_bd,a_min,a_max)[0])
-
-f_pl = (integrate.quad(mass_fctn_pl, (np.log10(Jup_min/q_Jupiter)), (np.log10(Jup_max/q_Jupiter)))[0]*integrate.quad(orbital_dist_pl,a_min,a_max)[0])
+f_pl = (integrate.quad(mass_fctn_pl, (Jup_min*q_Jupiter), (Jup_max*q_Jupiter))[0]*integrate.quad(orbital_dist_pl,a_min,a_max)[0])
 
 #Output is the mean number of companions per star for the brown dwarf component (f_ bd) and planet part (f_pl).
 
 print(f_bd,f_pl)
-st.text("Frequency of Brown Dwarfs: {}".format(f_bd))
 st.text("Frequency of Planets: {}".format(f_pl))
+st.text("Frequency of Brown Dwarfs: {}".format(f_bd))
+
+
