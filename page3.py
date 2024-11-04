@@ -13,7 +13,6 @@ from scipy import stats
 from scipy import integrate
 import pandas as pd
 import glob
-from IPython import display
 import pickle
 import timeit
 import time

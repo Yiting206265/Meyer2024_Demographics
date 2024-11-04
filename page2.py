@@ -9,7 +9,6 @@ from scipy import stats
 from scipy import integrate
 import pandas as pd
 import glob
-from IPython import display
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
 from bokeh.layouts import column
