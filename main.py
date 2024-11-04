@@ -41,7 +41,7 @@ import importlib
 
 # Create a sidebar for navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ("Page 1", "Page 2", "Page 3"))
+page = st.sidebar.radio("Go to", ("Frequency", "Yield Prediction"))
 
 # Load the corresponding page based on selection
 if page == "Page 1":
