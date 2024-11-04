@@ -44,13 +44,13 @@ st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ("Frequency", "Yield Prediction"))
 
 # Load the corresponding page based on selection
-if page == "Page 1":
+if page == "Frequency":
     try:
         import frequency
         importlib.reload(frequency)
     except:
         pass
-elif page == "Page 2":
+elif page == "Yield Prediction":
     try:
     
         import page2
