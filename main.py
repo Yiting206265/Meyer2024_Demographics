@@ -39,24 +39,34 @@ import importlib
 #    page3.show()
 
 
-# Create a sidebar for navigation
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ("Frequency", "Yield Prediction"))
+## Create a sidebar for navigation
+#st.sidebar.title("Navigation")
+#page = st.sidebar.radio("Go to", ("Frequency", "Yield Prediction"))
+#
+## Load the corresponding page based on selection
+#if page == "Frequency":
+#    try:
+#        import frequency
+#        importlib.reload(frequency)
+#    except:
+#        pass
+#elif page == "Yield Prediction":
+#    try:
+#    
+#        import page2
+#        importlib.reload(page2)
+#    except:
+#        pass
+#elif page == "Page 3":
+#    import page3
+#    page3.show()
 
-# Load the corresponding page based on selection
-if page == "Frequency":
-    try:
-        import frequency
-        importlib.reload(frequency)
-    except:
-        pass
-elif page == "Yield Prediction":
-    try:
-    
-        import page2
-        importlib.reload(page2)
-    except:
-        pass
-elif page == "Page 3":
-    import page3
-    page3.show()
+pages = {
+    "Demographics": [
+        st.Page("frequency.py", title="Frequency"),
+        st.Page("page2.py", title="Yield Prediction"),
+    ]
+}
+
+pg = st.navigation(pages)
+pg.run()
