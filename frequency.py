@@ -4,7 +4,7 @@ from scipy import integrate
 from scipy import interpolate
 import operator
 
-# Written by Michael R. Meyer, University of Michigan 
+# Written by Michael R. Meyer, University of Michigan
 # Updated June 30, 2024 
 # New Update October 28, 2024 
 
@@ -68,20 +68,20 @@ st.write(r"$\mu_{bd}$:", mean_bd)
 # User input parameter host_mass in Solar masses, companion mass range of interest in Jupiter masses (min, max) 
 # and orbital range of interest in AU (min, max) 
 
-host_mass = st.number_input("Host Mass ($\mathrm{M_{\odot}}$)", 0.01, None, step=None, format=None, key=None)
-Jup_min = st.number_input("Companion Minimum Mass ($\mathrm{M_{Jup}}$)", 0.01, None, step=None, format=None, key=None)
-Jup_max = st.number_input("Companion Maximum Mass ($\mathrm{M_{Jup}}$)", 0.01, None, step=None, format=None, key=None)
+host_mass = st.number_input("Host Mass ($\mathrm{M_{\odot}}$)", 0.01, None, step=None, format=None)
+Jup_min = st.number_input("Companion Minimum Mass ($\mathrm{M_{Jup}}$)", 0.01, None, step=None, format=None)
+Jup_max = st.number_input("Companion Maximum Mass ($\mathrm{M_{Jup}}$)", 0.01, None, step=None, format=None)
 q_Jupiter = 0.001/host_mass # Msun
 
-a_min = st.number_input("Orbital Minimum Separation (AU)", 0.01, None, step=None, format=None, key=None)
-a_max = st.number_input("Orbital Maximum Separation (AU)", 0.01, None, step=None, format=None, key=None)
+a_min = st.number_input("Orbital Minimum Separation (AU)", 0.01, None, step=None, format=None)
+a_max = st.number_input("Orbital Maximum Separation (AU)", 0.01, None, step=None, format=None)
 
 # Defining the functions for mass and orbital separation distibutions for both brown dwarf and planets 
 
 def mass_fctn_bd(q):
     return q**(beta)#dq
 def orbital_dist_bd(a):
-    return (A_bd*np.exp((-(np.log10(a)-(mean_bd))**2.)/(2.*sigma_bd**2.)))/(2.0*np.pi*sigma_bd*a)#da
+    return (A_bd*np.exp((-(np.log10(a)-(mean_bd))**2.)/(2.*sigma_bd**2.)))/(np.sqrt(2.0*np.pi)*sigma_bd)#da
 def mass_fctn_pl(q):
     return q**(-alpha_pl)#dm
 def orbital_dist_pl(a):
@@ -99,5 +99,4 @@ f_pl = (integrate.quad(mass_fctn_pl, (Jup_min*q_Jupiter), (Jup_max*q_Jupiter))[0
 print(f_bd,f_pl)
 st.text("Frequency of Planets: {}".format(f_pl))
 st.text("Frequency of Brown Dwarfs: {}".format(f_bd))
-
 
