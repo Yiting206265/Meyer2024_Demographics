@@ -470,8 +470,8 @@ if st.button('Run'):
                 bd_detected_fraction[ii]+=bd_detection[jj]
             bd_detection[jj]=0
             
-#Fout.close()
-#Fout1.close()
+Fout.close()
+Fout1.close()
 ##
 
 #    #######################
@@ -508,8 +508,8 @@ st.write("BD null-detection probability: %1.3f" % float(null_bd))
 n = p.n_real
 n_real = p.n_real
 
-dat_pl = np.genfromtxt('PL_out.dat', names=True)
-dat_bd = np.genfromtxt('BD_out.dat', names=True)
+dat_pl = np.genfromtxt('./PL_out.dat', names=True)
+dat_bd = np.genfromtxt('./BD_out.dat', names=True)
 
 flag_pl = dat_pl['flag']
 flag_bd = dat_bd['flag']
