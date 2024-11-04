@@ -469,9 +469,11 @@ if st.button('Run'):
                 combined_bd_detected[jj]+=1
                 bd_detected_fraction[ii]+=bd_detection[jj]
             bd_detection[jj]=0
-            
-Fout.close()
-Fout1.close()
+try:
+    Fout.close()
+    Fout1.close()
+except:
+    pass
 ##
 
 #    #######################
