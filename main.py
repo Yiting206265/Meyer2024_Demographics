@@ -64,7 +64,7 @@ import importlib
 pages = {
     "Demographics": [
         st.Page("frequency.py", title="Frequency"),
-        st.Page("page2.py", title="Yield Prediction"),
+        st.Page("yield.py", title="Yield Prediction"),
     ]
 }
 
