@@ -470,8 +470,8 @@ if st.button('Run'):
                 bd_detected_fraction[ii]+=bd_detection[jj]
             bd_detection[jj]=0
             
-#Fout.close()
-#Fout1.close()
+Fout.close()
+Fout1.close()
 ##
 
 #    #######################
