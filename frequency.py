@@ -140,8 +140,9 @@ f_pl = A_pl * np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for 
        np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
 
 # Display results in Streamlit
-st.text(f"Frequency of Planets:",f_pl)
-st.text(f"Frequency of Brown Dwarfs:",f_pl)
+st.write(f"Frequency of Planets:", f_pl)
+st.write(f"Frequency of Brown Dwarfs:", f_bd)
+
 
 ## Sub-Jupiter Model
 #st.subheader("Sub-Jupiters (< 1 MJ)")
