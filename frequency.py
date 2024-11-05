@@ -5,7 +5,6 @@ from scipy import interpolate
 import operator
 import matplotlib.pyplot as plt
 
-
 # Constants and model parameters for Brown Dwarfs
 A_bd_ln = -4.08
 mean_bd = 1.43   # log10
@@ -14,29 +13,21 @@ A_bd = np.exp(A_bd_ln)
 
 # Constants and model parameters for Giant Planets
 A_pl_ln = -5.28
-mu_natural = 1.31     # Mean in natural log scale
-sigma_pl_ln = np.exp(0.52)  # Standard deviation in natural log scale
+mu_natural = 1.31     #ln
+sigma_pl_ln = np.exp(0.52)  #ln
 
 # Conversion constant from natural log to log_10
 constant = 2.302585092994046
 
 # Convert parameters for Giant Planets to log_10 scale
 A_pl = np.exp(A_pl_ln)
-mu_pl = np.exp(sigma_pl_ln) / constant  # Mean in log_10 scale
-sigma_natural = np.exp(sigma_pl_ln)  # Standard deviation in natural scale
-sigma_pl = sigma_natural / constant # Convert to log_10 scale
+mu_pl = mu_natural / constant  # log10
+sigma_pl = sigma_pl_ln / constant # log10
 
 # Display model parameters in Streamlit
 st.header("Two Component Model for Exoplanet and Brown Dwarf Companions (Meyer et al. 2024)")
-#st.write(r"$A_{pl}$:", A_pl)
-#st.write(r"$\sigma_{pl}$:", sigma_pl)
-#st.write(r"$\mu_{pl}$:", mu_pl)
-#st.write(r"$A_{bd}$:", A_bd)
-#st.write(r"$\sigma_{bd}$:", sigma_bd)
-#st.write(r"$\mu_{bd}$:", mean_bd)
 
-st_type = st.radio("Stellar Type", ("M Dwarfs", "FGK", "A Stars"))
-
+st_type = st.radio("Choose the Stellar Spectral Type:", ("M Dwarfs", "FGK", "A Stars"))
 
 # User input for mass parameters
 host_mass = st.number_input("Host Mass ($\mathrm{M_{\odot}}$)", 0.01, value=1.0)
@@ -51,7 +42,6 @@ a1 = d_q
 # Brown Dwarf model distribution (mass ratio)
 alpha_bd = -0.3
 a2_bd = d_q ** alpha_bd
-#area_bd = np.trapz(a2_bd, d_q)  # Compute area under the curve for normalization
 
 # Giant Planet model distribution (mass ratio)
 alpha_gp = 1.39
@@ -79,8 +69,6 @@ ax1.axvline(x=mass_ratio_max, color='purple', linestyle='--', label=f'Max Mass R
 ax1.set_xlabel('Mass Ratio q', fontsize=20, labelpad=10.4)
 ax1.set_ylabel('Probability Density', fontsize=20, labelpad=10.4)
 ax1.tick_params(axis='both', which='major', labelsize=15)
-#ax1.set_xlim(np.log10(0.0001), np.log10(1))  # Adjust x-limits
-#ax1.set_ylim(0, 1.1)
 ax1.legend(loc='upper right', fontsize=12)
 ax1.set_title("Mass Ratio Distributions", fontsize=18)
 
@@ -98,7 +86,6 @@ elif st_type == "A Stars":
     s_m = np.log(10**0.92)
     mu_m = np.log(522)            # De Rosa (x1.35 DM91)
 
-
 # Define orbital separation distributions for Brown Dwarfs and Giant Planets
 def orbital_dist_bd(a):
     return (np.exp(-(np.log(a) - mu_m) ** 2 / (2 * s_m ** 2))) #/ (np.sqrt(2 * np.pi) * s_m*a)
@@ -107,7 +94,7 @@ def orbital_dist_pl(a):
     return (np.exp(-(np.log(a) - mu_natural) ** 2 / (2 * sigma_pl_ln ** 2))) #/ (np.sqrt(2 * np.pi) * sigma_pl_ln*a)
 
 # Create a log-scaled range for plotting
-a_values = np.logspace(-6, 6, 500, base=2.71828)  # Values from 0.01 to 1000, log-scaled
+a_values = np.logspace(-6, 10, 500, base=2.71828)
 
 # Plotting the normalized distributions
 ax2.plot(np.log(a_values), orbital_dist_bd(a_values), label='Brown Dwarf Model', color='r')
@@ -117,11 +104,12 @@ ax2.plot(np.log(a_values), orbital_dist_pl(a_values), label='Giant Planet Model'
 ax2.axvline(x=np.log(a_min), color='green', linestyle='--', label=f'Min Separation = {a_min:.2f} AU')
 ax2.axvline(x=np.log(a_max), color='purple', linestyle='--', label=f'Max Separation = {a_max:.2f} AU')
 
+ax2.set_ylim(0,1.5)
 # Configure semi-major axis distribution plot
 ax2.set_xlabel('Semi-Major Axis (ln AU)', fontsize=20, labelpad=10.4)
 ax2.set_ylabel('Probability Density', fontsize=20, labelpad=10.4)
 ax2.tick_params(axis='both', which='major', labelsize=15)
-ax2.legend(loc='upper left', fontsize=12)
+ax2.legend(loc='upper right', fontsize=12)
 ax2.set_title("Semi-Major Axis Distributions", fontsize=18)
 
 # Display the plots
@@ -146,11 +134,7 @@ st.write(f"Frequency of Brown Dwarfs:", f_bd)
 
 # Sub-Jupiter Model
 st.subheader("Sub-Jupiters (< 1 MJ)")
-# Constants and parameters for Sub-Jupiter model
-A_sub_jupiter = A_pl   # Amplitude for Sub-Jupiter model (adjust as needed)
-transition_radius = 10.0  # AU, transition point from super-Jupiter to log-flat
-log_flat_value = 0.00235  # Normalized log-flat value
-
+st.write(f"For planets less than 1 Jupiter mass, we made a customized sub-Jupiter model where the orbital distribution within 10 AU is the same as the giant planet model, but log-flat beyond 10 AU.")
 
 # Create plots for both distributions side by side
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(17, 6))
@@ -178,18 +162,6 @@ ax1.tick_params(axis='both', which='major', labelsize=15)
 ax1.legend(loc='upper right', fontsize=12)
 ax1.set_title("Mass Ratio Distributions", fontsize=18)
 
-# User input for orbital separations using sliders
-
-if st_type == "M Dwarfs":
-    s_m =  np.log(10**1.21)    # Winters
-    mu_m = np.log(10**mean_bd)
-elif st_type == "FGK":
-    s_m = np.log(10**1.68)
-    mu_m = np.log(50)
-elif st_type == "A Stars":
-    s_m = np.log(10**0.92)
-    mu_m = np.log(522)            # De Rosa (x1.35 DM91)
-
 
 # Define orbital separation distributions for Brown Dwarfs and Giant Planets
 def orbital_dist_subJupiter(a):
@@ -199,7 +171,7 @@ def orbital_dist_subJupiter(a):
         return 0.84
 
 # Create a log-scaled range for plotting
-a_values = np.logspace(-6, 6, 500, base=2.71828)  # Values from 0.01 to 1000, log-scaled
+a_values = np.logspace(-6, 10, 500, base=2.71828)  # Values from 0.01 to 1000, log-scaled
 sub_jupiter_values = [orbital_dist_subJupiter(a) for a in a_values]
 # Plotting the normalized distributions
 ax2.plot(np.log(a_values), sub_jupiter_values, label='Sub-Jupiter Model', color='orange')
@@ -212,9 +184,9 @@ ax2.axvline(x=np.log(a_max), color='purple', linestyle='--', label=f'Max Separat
 ax2.set_xlabel('Semi-Major Axis (ln AU)', fontsize=20, labelpad=10.4)
 ax2.set_ylabel('Probability Density', fontsize=20, labelpad=10.4)
 ax2.tick_params(axis='both', which='major', labelsize=15)
-ax2.legend(loc='upper left', fontsize=12)
+ax2.legend(loc='upper right', fontsize=12)
 ax2.set_title("Semi-Major Axis Distributions", fontsize=18)
-
+ax2.set_ylim(0,1.5)
 # Display the plots
 st.pyplot(fig)
 
