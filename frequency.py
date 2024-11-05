@@ -55,11 +55,11 @@ alpha_gp = 1.39
 a2_gp = d_q ** -alpha_gp
 
 # Create plots for both distributions side by side
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(17, 6))
 
 # Plotting normalized mass ratio distributions
-ax1.plot(a1, a2_bd, color='blue', label='Brown Dwarf Model', linewidth=3)
-ax1.plot(a1, a2_gp, color='orange', label='Giant Planet Model', linewidth=3)
+ax1.plot(a1, a2_bd, color='r', label='Brown Dwarf Model', linewidth=3)
+ax1.plot(a1, a2_gp, color='blue', label='Giant Planet Model', linewidth=3)
 
 ax1.set_xscale('log')
 ax1.set_yscale('log')
@@ -74,7 +74,7 @@ ax1.axvline(x=mass_ratio_max, color='purple', linestyle='--', label=f'Max Mass R
 
 # Configure mass ratio distribution plot
 ax1.set_xlabel('Mass Ratio q', fontsize=20, labelpad=10.4)
-ax1.set_ylabel('Normalized Probability Density', fontsize=20, labelpad=10.4)
+ax1.set_ylabel('Probability Density', fontsize=20, labelpad=10.4)
 ax1.tick_params(axis='both', which='major', labelsize=15)
 #ax1.set_xlim(np.log10(0.0001), np.log10(1))  # Adjust x-limits
 #ax1.set_ylim(0, 1.1)
@@ -96,8 +96,8 @@ def orbital_dist_pl(a):
 
 # Ensure you have a fine range for plotting
 a_values = np.logspace(-4, 3, 500)  # Use logspace for better resolution
-ax2.plot(a_values, orbital_dist_bd(a_values), label='Brown Dwarf Distribution', color='C2')
-ax2.plot(a_values, orbital_dist_pl(a_values), label='Giant Planet Distribution', color='C3')
+ax2.plot(a_values, orbital_dist_bd(a_values), label='Brown Dwarf Model', color='r')
+ax2.plot(a_values, orbital_dist_pl(a_values), label='Giant Planet Model', color='blue')
 
 # Add vertical lines for min and max separations
 ax2.axvline(x=a_min, color='green', linestyle='--', label=f'Min Separation = {a_min:.2f} AU')
