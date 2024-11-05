@@ -28,12 +28,12 @@ sigma_pl = sigma_natural / constant # Convert to log_10 scale
 
 # Display model parameters in Streamlit
 st.header("Two Component Model for Exoplanet and Brown Dwarf Companions (Meyer et al. 2024)")
-st.write(r"$A_{pl}$:", A_pl)
-st.write(r"$\sigma_{pl}$:", sigma_pl)
-st.write(r"$\mu_{pl}$:", mu_pl)
-st.write(r"$A_{bd}$:", A_bd)
-st.write(r"$\sigma_{bd}$:", sigma_bd)
-st.write(r"$\mu_{bd}$:", mean_bd)
+#st.write(r"$A_{pl}$:", A_pl)
+#st.write(r"$\sigma_{pl}$:", sigma_pl)
+#st.write(r"$\mu_{pl}$:", mu_pl)
+#st.write(r"$A_{bd}$:", A_bd)
+#st.write(r"$\sigma_{bd}$:", sigma_bd)
+#st.write(r"$\mu_{bd}$:", mean_bd)
 
 st_type = st.radio("Stellar Type", ("M Dwarfs", "FGK", "A Stars"))
 
@@ -140,8 +140,8 @@ f_pl = A_pl * np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for 
        np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
 
 # Display results in Streamlit
-st.text(f"Frequency of Planets: {f_pl}")
-st.text(f"Frequency of Brown Dwarfs: {f_bd}")
+st.text(f"Frequency of Planets:",f_pl)
+st.text(f"Frequency of Brown Dwarfs:",f_pl)
 
 ## Sub-Jupiter Model
 #st.subheader("Sub-Jupiters (< 1 MJ)")
