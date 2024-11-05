@@ -5,14 +5,15 @@ from scipy import interpolate
 import operator
 import matplotlib.pyplot as plt
 
+
 # Constants and model parameters for Brown Dwarfs
-A_bd_ln = -4.08  # Amplitude for Brown Dwarfs (natural log scale)
-mean_bd = 1.43   # Mean of the log-normal distribution for M dwarfs
-sigma_bd = 1.21  # Standard deviation of the log-normal distribution
-A_bd = np.exp(A_bd_ln)  # Convert amplitude to linear scale
+A_bd_ln = -4.08
+mean_bd = 1.43   # log10
+sigma_bd = 1.21  # log10
+A_bd = np.exp(A_bd_ln)
 
 # Constants and model parameters for Giant Planets
-A_pl_ln = -5.28  # Amplitude for Giant Planets (natural log scale)
+A_pl_ln = -5.28
 mu_natural = 1.31     # Mean in natural log scale
 sigma_pl_ln = 0.52  # Standard deviation in natural log scale
 
@@ -20,7 +21,7 @@ sigma_pl_ln = 0.52  # Standard deviation in natural log scale
 constant = 2.302585092994046
 
 # Convert parameters for Giant Planets to log_10 scale
-A_pl = np.exp(A_pl_ln)  # Linear amplitude for Giant Planets
+A_pl = np.exp(A_pl_ln)
 mu_pl = mu_natural / constant  # Mean in log_10 scale
 sigma_natural = np.exp(sigma_pl_ln)  # Standard deviation in natural scale
 sigma_pl = sigma_natural / constant # Convert to log_10 scale
@@ -33,6 +34,9 @@ st.write(r"$\mu_{pl}$:", mu_pl)
 st.write(r"$A_{bd}$:", A_bd)
 st.write(r"$\sigma_{bd}$:", sigma_bd)
 st.write(r"$\mu_{bd}$:", mean_bd)
+
+st_type = st.radio("Stellar Type", ("M Dwarfs", "FGK", "A Stars"))
+
 
 # User input for mass parameters
 host_mass = st.number_input("Host Mass ($\mathrm{M_{\odot}}$)", 0.01, value=1.0)
@@ -84,16 +88,16 @@ ax1.set_title("Mass Ratio Distributions", fontsize=18)
 a_min = st.slider("Orbital Minimum Separation (AU)", min_value=0.01, max_value=100.0, value=1.0)
 a_max = st.slider("Orbital Maximum Separation (AU)", min_value=0.01, max_value=1000.0, value=10.0)
 
-s_m =  np.log(10**1.21)    # Winters
-mu_m = np.log(10**mean_bd)                # Winters (x1.35 DM91)
-# ~ s_m = np.log(10**.47)        # Janson
-# ~ mu_m = np.log(10**.78)    # Janson
-# ~ s_m = np.log(10**0.97)            # Susemiehl
-# ~ mu_m = np.log(10**1.68)        #  Susemiehl
-s_fgk = np.log(10**1.68)
-mu_fgk = np.log(50)
-s_a = np.log(10**0.92)
-mu_a = np.log(522)            # De Rosa (x1.35 DM91)
+if st_type == "M Dwarfs":
+    s_m =  np.log(10**1.21)    # Winters
+    mu_m = np.log(10**mean_bd)
+elif st_type == "FGK":
+    s_m = np.log(10**1.68)
+    mu_m = np.log(50)
+elif st_type == "A Stars":
+    s_m = np.log(10**0.92)
+    mu_m = np.log(522)            # De Rosa (x1.35 DM91)
+
 
 # Define orbital separation distributions for Brown Dwarfs and Giant Planets
 def orbital_dist_bd(a):
