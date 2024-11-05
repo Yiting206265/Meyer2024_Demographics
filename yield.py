@@ -31,7 +31,7 @@ st.title("Yield Predictions")
 
 # File uploader for JSON file
 
-uploaded_file = st.file_uploader("Upload your JSON file. The file should contain a dictionary of the name of the targets, the filter band, the 5-sigma contrast and separation.", type="json", key='up1')
+uploaded_file = st.file_uploader("Upload your JSON file. It should contain a big dictionary where the first-level keys are target names, the second-level keys are filter bands, and the third-level keys are pairs of 5-sigma contrast and separation values. An example can be found below:", type="json", key='up1')
 
 
 if uploaded_file is None:
@@ -89,11 +89,9 @@ except json.JSONDecodeError:
 except Exception as e:
     st.error(f"An error occurred: {e}")
 
-
-
     
 # File uploader for the input object file
-uploaded_file = st.file_uploader("Upload your object file (must be in text format)", type=["txt", "csv"], key='up2')
+uploaded_file = st.file_uploader("Upload your target star file with the following information: stellar age, distance, stellar mass, and magnitude in a specific filter band.", type=["txt", "csv"], key='up2')
 
 if uploaded_file is None:
     file = open('./files/mdwarfs_w1w2.txt')
@@ -118,7 +116,7 @@ try:
     age = df['age']
     dist = df['distance']
     star_mass = df['mass']
-    inmag = df['W1']          # <-- Relevant for getting magnitude band correct!
+    inmag = df['Magnitude']          # <-- Relevant for getting magnitude band correct!
     # Converting age from Myrs as in input file to Gyrs as in model grid
     age /= 1e3
     # number of stars in survey
@@ -127,6 +125,7 @@ except:
     print('File not uploaded')
 
 st.title("Generation of Companions")
+st.write("Below we will create random sets of orbital parameters using Poisson statistics and the following priors: uniform priors for the longitude of the ascending node and the longitude of periastron, cosine priors for inclination, and Gaussian priors for eccentricity N~(0, 0.3) (Hogg2010). For each set of orbital parameters, we generate evenly spaced in time and assess detectability across an even grid of companion masses and semimajor axes. Each survey is a realization. The same set of orbital parameters is applied to every target. For low-mass planets, we utilize the BEX evolutionary models (Linder2019), while for higher-mass companions, we use the ATMO 2020 models (Phillips2020).")
 
 # Parameters stored in a class
 p = input_pams()
@@ -146,61 +145,64 @@ p.alpha_bd = 0.3 #was 0.25, depends on
 p.median_loga_bd = 1.43   ## Extrapolated from Solar to BD
 p.sigma_bd = 1.21 #SPHERE SHINE survey
 
+st.write("Enter user input parameters, then click run for the simulation. Specify the normalization frequency within a certain separation-mass space. Then specify the limits for which the random companions will be generated.")
+
 #user input
 # Number of real planets
-p.n_real = st.slider("Number of Real Planets (p.n_real)", min_value=1, max_value=1000, value=100)
+p.n_real = st.slider("Number of Surveys/Realizations", min_value=1, max_value=10000, value=100)
 
 
 # Normalization bounds for planets
 st.subheader("Normalization Bounds for Planets")
 # Planet frequency
-p.P_pl = st.number_input("Planet Frequency (p.P_pl)",  0.01, None, step=None, format=None, key=None)
-p.an_min_pl = st.slider("Minimum Planet Separation (AU) (p.an_min_pl)", min_value=0.01, max_value=1000.0, value=0.01)
-p.an_max_pl = st.slider("Maximum Planet Separation (AU) (p.an_max_pl)", min_value=1.0, max_value=1000.0, value=100.0)
+p.P_pl = st.number_input("Planet Frequency",  0.01, None, step=None, format=None, key=None)
+p.an_min_pl = st.slider("Minimum Planet Separation (AU)", min_value=0.01, max_value=1000.0, value=0.01)
+p.an_max_pl = st.slider("Maximum Planet Separation (AU)", min_value=1.0, max_value=1000.0, value=100.0)
 
 # Minimum and maximum planet mass (in solar masses)
-p.mn_min_pl = st.slider("Minimum Planet Mass (Jupiter Masses) (p.mn_min_pl)", min_value=0.001, max_value=200.0, value=1.0)
-p.mn_max_pl = st.slider("Maximum Planet Mass (Jupiter Masses) (p.mn_max_pl)", min_value=0.001, max_value=200.0, value=75.0)
+p.mn_min_pl = st.slider("Minimum Planet Mass ($M_{Jup}$)", min_value=0.001, max_value=200.0, value=1.0)
+p.mn_max_pl = st.slider("Maximum Planet Mass ($M_{Jup}$)", min_value=0.001, max_value=200.0, value=75.0)
 p.mn_min_pl = p.mn_min_pl*0.0009545942
 p.mn_max_pl = p.mn_max_pl*0.0009545942
 
 # Planet limits
-st.subheader("Planet Limits")
-p.a_min_pl = st.slider("Minimum Semi-Major Axis (AU) (p.a_min_pl)", min_value=0, max_value=1000, value=0)
-p.a_max_pl = st.slider("Maximum Semi-Major Axis (AU) (p.a_max_pl)", min_value=0, max_value=1000, value=1000)
+st.subheader("Simulation Limits for Planets")
+p.a_min_pl = st.slider("Minimum Simulation Semi-Major Axis (AU)", min_value=0, max_value=1000, value=0)
+p.a_max_pl = st.slider("Maximum Simulation Semi-Major Axis (AU)", min_value=0, max_value=1000, value=1000)
 
 # Change parameters for planets
-p.m_min_pl = st.slider("Minimum Planet Mass (in Jupiter Masses) (p.m_min_pl)", min_value=0.0009545942, max_value=200.0, value=1.0)
-p.m_max_pl = st.slider("Maximum Planet Mass (in Jupiter Masses) (p.m_max_pl)", min_value=0.0009545942, max_value=200.0, value=75.0)
+p.m_min_pl = st.slider("Minimum Simulation Planet Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=1.0)
+p.m_max_pl = st.slider("Maximum Simulation Planet Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=75.0)
 p.m_min_pl = p.m_min_pl*0.0009545942
 p.m_max_pl = p.m_max_pl*0.0009545942
 
 
 # BD limits
-st.subheader("Brown Dwarf Limits")
-p.P_bd = st.number_input("Brown Dwarf Frequency (p.P_pl)",  0.01, None, step=None, format=None, key=None)
-p.an_min_bd = st.slider("Minimum BD Separation (AU) (p.an_min_bd)", min_value=0.0, max_value=10.0, value=0.0)
-p.an_max_bd = st.slider("Maximum BD Separation (AU) (p.an_max_bd)", min_value=1.0, max_value=150.0, value=108.91175375)
-
-# Minimum and maximum brown dwarf mass (in solar masses)
-p.mn_min_bd = st.slider("Minimum BD Mass (Jupiter Masses) (p.mn_min_bd)", min_value=0.0009545942, max_value=200.0, value=3.0)
-p.mn_max_bd = st.slider("Maximum BD Mass (Jupiter Masses) (p.mn_max_bd)", min_value=0.0009545942, max_value=200.0, value=100.0)
+st.subheader("Normalization Bounds for Brown Dwarfs")
+p.P_bd = st.number_input("Brown Dwarf Frequency",  0.01, None, step=None, format=None, key=None)
+p.an_min_bd = st.slider("Minimum BD Separation (AU)", min_value=0.0, max_value=10.0, value=0.0)
+p.an_max_bd = st.slider("Maximum BD Separation (AU)", min_value=1.0, max_value=150.0, value=108.91175375)
+p.mn_min_bd = st.slider("Minimum BD Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=3.0)
+p.mn_max_bd = st.slider("Maximum BD Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=100.0)
 p.mn_min_bd *=0.0009545942
 p.mn_max_bd *=0.0009545942
 
 # BD mass limits
-p.m_min_bd = st.slider("Minimum BD Mass (Jupiter Masses) (p.m_min_bd)", min_value=0.0009545942, max_value=200.0, value=3.0)
-p.m_max_bd = st.slider("Maximum BD Mass (Jupiter Masses) (p.m_max_bd)", min_value=0.0009545942, max_value=200.0, value=100.0)
+st.subheader("Simulation Limits for Brown Dwarfs")
+# Minimum and maximum brown dwarf mass (in solar masses)
+p.m_min_bd = st.slider("Minimum Simulation BD Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=3.0)
+p.m_max_bd = st.slider("Maximum Simulation BD Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=100.0)
 p.m_min_bd*=0.0009545942
 p.m_max_bd*=0.0009545942
 
-
 # BD semi-major axis limits
-p.a_min_bd = st.slider("Minimum BD Semi-Major Axis (AU) (p.a_min_bd)", min_value=0.0, max_value=100.0, value=0.0)
-p.a_max_bd = st.slider("Maximum BD Semi-Major Axis (AU) (p.a_max_bd)", min_value=0.0, max_value=200.0, value=108.0)
+p.a_min_bd = st.slider("Minimum Simulation BD Semi-Major Axis (AU)", min_value=0.0, max_value=100.0, value=0.0)
+p.a_max_bd = st.slider("Maximum Simulation BD Semi-Major Axis (AU)", min_value=0.0, max_value=200.0, value=108.0)
 
-p.bd_sma = st.radio("Brown Dwarf SMA Distribution", ("lognormal", "logflat"))
-p.planet_sma = st.radio("Planet SMA Distribution", ("lognormal", "logflat"))
+st.subheader("Model Assumptions")
+st.write("The mass distributions are assumed to be power-law with index of 1.39 and 0.3 for planets and brown dwarfs, repectively, from Meyer 2024.")
+p.bd_sma = st.radio("Brown Dwarf SMA Distribution:", ("lognormal", "logflat"))
+p.planet_sma = st.radio("Planet SMA Distribution:", ("lognormal", "logflat"))
 
 #p.output_file = 'results_Kellen_superJ.dat'
 
@@ -616,7 +618,7 @@ st.bokeh_chart(p)
 
 
 # Set up your Streamlit application
-st.title("Detection Probability Distribution")
+st.subheader("Detection Probability Distribution")
 jj_pl = np.random.randint(0, n_real, size=n_real)  # Example data
 jj_bd = np.random.randint(0, n_real, size=n_real)  # Example data
 flag_pl = np.random.randint(0, 8, size=n_real)     # Example data
@@ -658,7 +660,7 @@ bb = np.arange(31) - 0.5
 hh1 = np.histogram(pp, bins=bb, density=True)
 
 # Create the first plot
-st.subheader("Detection Probability Distribution")
+
 fig1, ax1 = plt.subplots()
 ax1.hist(w_pl, bins=hh1[1], density=True, color='g', alpha=.3, label='Detected Planets')
 ax1.hist(w_bd, bins=bb, density=True, color='red', alpha=.3, label='Detected BDs')
