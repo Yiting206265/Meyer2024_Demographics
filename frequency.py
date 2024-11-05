@@ -15,14 +15,14 @@ A_bd = np.exp(A_bd_ln)
 # Constants and model parameters for Giant Planets
 A_pl_ln = -5.28
 mu_natural = 1.31     # Mean in natural log scale
-sigma_pl_ln = 0.52  # Standard deviation in natural log scale
+sigma_pl_ln = np.exp(0.52)  # Standard deviation in natural log scale
 
 # Conversion constant from natural log to log_10
 constant = 2.302585092994046
 
 # Convert parameters for Giant Planets to log_10 scale
 A_pl = np.exp(A_pl_ln)
-mu_pl = mu_natural / constant  # Mean in log_10 scale
+mu_pl = np.exp(sigma_pl_ln) / constant  # Mean in log_10 scale
 sigma_natural = np.exp(sigma_pl_ln)  # Standard deviation in natural scale
 sigma_pl = sigma_natural / constant # Convert to log_10 scale
 
@@ -144,40 +144,87 @@ st.write(f"Frequency of Planets:", f_pl)
 st.write(f"Frequency of Brown Dwarfs:", f_bd)
 
 
-## Sub-Jupiter Model
-#st.subheader("Sub-Jupiters (< 1 MJ)")
-## Constants and parameters for Sub-Jupiter model
-#A_sub_jupiter = A_pl   # Amplitude for Sub-Jupiter model (adjust as needed)
-#transition_radius = 10.0  # AU, transition point from super-Jupiter to log-flat
-#log_flat_value = 0.00235  # Normalized log-flat value
-#
-#
-#def sub_jupiter_distribution(a):
-#    if a <= transition_radius:
-#        return A_sub_jupiter * np.exp(-(np.log10(a) - mu_pl) ** 2 / (2 * sigma_pl ** 2)) / (np.sqrt(2 * np.pi) * sigma_pl)
-#    else:
-#        return log_flat_value
-#
-## Prepare data for Sub-Jupiter model plot
-#a_values_sub_jupiter = np.linspace(0.01, 100, 500)  # Define a range for semi-major axes
-#sub_jupiter_values = [sub_jupiter_distribution(a) for a in a_values_sub_jupiter]
-#
-## Create a separate plot for the Sub-Jupiter model
-#fig_sub_jupiter, ax_sub_jupiter = plt.subplots(figsize=(10, 6))
-#ax_sub_jupiter.plot(a_values_sub_jupiter, sub_jupiter_values, label='Sub-Jupiter Model', color='orange')
-#ax_sub_jupiter.set_xscale('log')
-#ax_sub_jupiter.set_yscale('log')
-#
-## Configure the plot
-#ax_sub_jupiter.set_xlabel('Semi-Major Axis (AU)', fontsize=16)
-#ax_sub_jupiter.set_ylabel('Probability Density', fontsize=16)
-#ax_sub_jupiter.set_title("Sub-Jupiter Model Distribution", fontsize=18)
-#ax_sub_jupiter.legend()
-#
-## Display the Sub-Jupiter model plot
-#st.pyplot(fig_sub_jupiter)
-#
-## Final yield calculation for Sub-Jupiter model
-#yield_sub_jupiter = np.trapz(sub_jupiter_values, a_values_sub_jupiter)
-#st.text(f"Freuqency of Sub-Jupiters: {yield_sub_jupiter:.5f}")
-#
+# Sub-Jupiter Model
+st.subheader("Sub-Jupiters (< 1 MJ)")
+# Constants and parameters for Sub-Jupiter model
+A_sub_jupiter = A_pl   # Amplitude for Sub-Jupiter model (adjust as needed)
+transition_radius = 10.0  # AU, transition point from super-Jupiter to log-flat
+log_flat_value = 0.00235  # Normalized log-flat value
+
+
+# Create plots for both distributions side by side
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(17, 6))
+
+# Plotting normalized mass ratio distributions
+ax1.plot(a1, a2_gp, color='blue', label='Giant Planet Model')
+
+ax1.set_xscale('log')
+ax1.set_yscale('log')
+
+# Calculate mass ratio limits
+mass_ratio_min = Jup_min * q_Jupiter
+mass_ratio_max = Jup_max * q_Jupiter
+
+# Add vertical lines for mass ratio limits
+ax1.axvline(x=mass_ratio_min, color='green', linestyle='--', label=f'Min Mass Ratio = {mass_ratio_min:.2f}')
+ax1.axvline(x=mass_ratio_max, color='purple', linestyle='--', label=f'Max Mass Ratio = {mass_ratio_max:.2f}')
+
+# Configure mass ratio distribution plot
+ax1.set_xlabel('Mass Ratio q', fontsize=20, labelpad=10.4)
+ax1.set_ylabel('Probability Density', fontsize=20, labelpad=10.4)
+ax1.tick_params(axis='both', which='major', labelsize=15)
+#ax1.set_xlim(np.log10(0.0001), np.log10(1))  # Adjust x-limits
+#ax1.set_ylim(0, 1.1)
+ax1.legend(loc='upper right', fontsize=12)
+ax1.set_title("Mass Ratio Distributions", fontsize=18)
+
+# User input for orbital separations using sliders
+
+if st_type == "M Dwarfs":
+    s_m =  np.log(10**1.21)    # Winters
+    mu_m = np.log(10**mean_bd)
+elif st_type == "FGK":
+    s_m = np.log(10**1.68)
+    mu_m = np.log(50)
+elif st_type == "A Stars":
+    s_m = np.log(10**0.92)
+    mu_m = np.log(522)            # De Rosa (x1.35 DM91)
+
+
+# Define orbital separation distributions for Brown Dwarfs and Giant Planets
+def orbital_dist_subJupiter(a):
+    if a <= 10:
+        return (np.exp(-(np.log(a) - mu_natural) ** 2 / (2 * sigma_pl_ln ** 2)))#/(np.sqrt(2*np.pi)*sigma_pl_ln*a)
+    else:
+        return 0.84
+
+# Create a log-scaled range for plotting
+a_values = np.logspace(-6, 6, 500, base=2.71828)  # Values from 0.01 to 1000, log-scaled
+sub_jupiter_values = [orbital_dist_subJupiter(a) for a in a_values]
+# Plotting the normalized distributions
+ax2.plot(np.log(a_values), sub_jupiter_values, label='Sub-Jupiter Model', color='orange')
+
+# Add vertical lines for min and max separations
+ax2.axvline(x=np.log(a_min), color='green', linestyle='--', label=f'Min Separation = {a_min:.2f} AU')
+ax2.axvline(x=np.log(a_max), color='purple', linestyle='--', label=f'Max Separation = {a_max:.2f} AU')
+
+# Configure semi-major axis distribution plot
+ax2.set_xlabel('Semi-Major Axis (ln AU)', fontsize=20, labelpad=10.4)
+ax2.set_ylabel('Probability Density', fontsize=20, labelpad=10.4)
+ax2.tick_params(axis='both', which='major', labelsize=15)
+ax2.legend(loc='upper left', fontsize=12)
+ax2.set_title("Semi-Major Axis Distributions", fontsize=18)
+
+# Display the plots
+st.pyplot(fig)
+
+# Define the range for orbital distances and mass ratios using correct log_10 ranges
+mass_ratio_values = np.linspace(Jup_min * q_Jupiter, Jup_max * q_Jupiter, 500)
+a_values_m = np.linspace(a_min,a_max, 500)
+
+# Re-run integration over corrected distribution ranges
+f_subJ = A_pl * np.trapz([orbital_dist_subJupiter(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a in a_values_m], a_values_m) * \
+       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
+
+# Display results in Streamlit
+st.write(f"Frequency of Sub-Jupiters:", f_subJ)
