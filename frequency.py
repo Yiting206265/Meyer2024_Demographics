@@ -85,29 +85,28 @@ a_min = st.slider("Orbital Minimum Separation (AU)", min_value=0.01, max_value=1
 a_max = st.slider("Orbital Maximum Separation (AU)", min_value=0.01, max_value=1000.0, value=10.0)
 
 # Define orbital separation distributions for Brown Dwarfs and Giant Planets
-# Update the orbital distribution functions to include amplitude
 def orbital_dist_bd(a):
     return (np.exp(-(np.log10(a) - mean_bd) ** 2 / (2 * sigma_bd ** 2))) / (np.sqrt(2 * np.pi) * sigma_bd)
 
 def orbital_dist_pl(a):
     return (np.exp(-(np.log10(a) - mu_pl) ** 2 / (2 * sigma_pl ** 2))) / (np.sqrt(2 * np.pi) * sigma_pl)
 
-# Ensure you have a fine range for plotting
-a_values = np.linspace(0, 1000, 5000)  # Use logspace for better resolution
-ax2.plot(a_values, orbital_dist_bd(a_values), label='Brown Dwarf Model', color='r')
-ax2.plot(a_values, orbital_dist_pl(a_values), label='Giant Planet Model', color='blue')
+# Create a log-scaled range for plotting
+a_values = np.logspace(-3, 3, 500)  # Values from 0.01 to 1000, log-scaled
+
+# Plotting the normalized distributions
+ax2.plot(np.log10(a_values), orbital_dist_bd(a_values), label='Brown Dwarf Model', color='r')
+ax2.plot(np.log10(a_values), orbital_dist_pl(a_values), label='Giant Planet Model', color='blue')
 
 # Add vertical lines for min and max separations
-ax2.axvline(x=a_min, color='green', linestyle='--', label=f'Min Separation = {a_min:.2f} AU')
-ax2.axvline(x=a_max, color='purple', linestyle='--', label=f'Max Separation = {a_max:.2f} AU')
+ax2.axvline(x=np.log10(a_min), color='green', linestyle='--', label=f'Min Separation = {a_min:.2f} AU')
+ax2.axvline(x=np.log10(a_max), color='purple', linestyle='--', label=f'Max Separation = {a_max:.2f} AU')
 
 # Configure semi-major axis distribution plot
-ax2.set_xlabel('Semi-Major Axis (AU)', fontsize=20, labelpad=10.4)
+ax2.set_xlabel('Semi-Major Axis (Log AU)', fontsize=20, labelpad=10.4)
 ax2.set_ylabel('Probability Density', fontsize=20, labelpad=10.4)
 ax2.tick_params(axis='both', which='major', labelsize=15)
-ax2.set_xscale('log')
-ax2.set_yscale('log')
-ax2.legend(loc='upper right', fontsize=12)
+ax2.legend(loc='upper left', fontsize=12)
 ax2.set_title("Semi-Major Axis Distributions", fontsize=18)
 
 # Display the plots
@@ -128,3 +127,42 @@ f_pl = A_pl * np.trapz([orbital_dist_pl(a)/(np.sqrt(2 * np.pi)*a) for a in a_val
 # Display results in Streamlit
 st.text(f"Frequency of Planets: {f_pl}")
 st.text(f"Frequency of Brown Dwarfs: {f_bd}")
+
+
+## Sub-Jupiter Model
+#st.subheader("Sub-Jupiters (< 1 MJ)")
+## Constants and parameters for Sub-Jupiter model
+#A_sub_jupiter = A_pl   # Amplitude for Sub-Jupiter model (adjust as needed)
+#transition_radius = 10.0  # AU, transition point from super-Jupiter to log-flat
+#log_flat_value = 0.00235  # Normalized log-flat value
+#
+#
+#def sub_jupiter_distribution(a):
+#    if a <= transition_radius:
+#        return A_sub_jupiter * np.exp(-(np.log10(a) - mu_pl) ** 2 / (2 * sigma_pl ** 2)) / (np.sqrt(2 * np.pi) * sigma_pl)
+#    else:
+#        return log_flat_value
+#
+## Prepare data for Sub-Jupiter model plot
+#a_values_sub_jupiter = np.linspace(0.01, 100, 500)  # Define a range for semi-major axes
+#sub_jupiter_values = [sub_jupiter_distribution(a) for a in a_values_sub_jupiter]
+#
+## Create a separate plot for the Sub-Jupiter model
+#fig_sub_jupiter, ax_sub_jupiter = plt.subplots(figsize=(10, 6))
+#ax_sub_jupiter.plot(a_values_sub_jupiter, sub_jupiter_values, label='Sub-Jupiter Model', color='orange')
+#ax_sub_jupiter.set_xscale('log')
+#ax_sub_jupiter.set_yscale('log')
+#
+## Configure the plot
+#ax_sub_jupiter.set_xlabel('Semi-Major Axis (AU)', fontsize=16)
+#ax_sub_jupiter.set_ylabel('Probability Density', fontsize=16)
+#ax_sub_jupiter.set_title("Sub-Jupiter Model Distribution", fontsize=18)
+#ax_sub_jupiter.legend()
+#
+## Display the Sub-Jupiter model plot
+#st.pyplot(fig_sub_jupiter)
+#
+## Final yield calculation for Sub-Jupiter model
+#yield_sub_jupiter = np.trapz(sub_jupiter_values, a_values_sub_jupiter)
+#st.text(f"Freuqency of Sub-Jupiters: {yield_sub_jupiter:.5f}")
+#
