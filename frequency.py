@@ -84,26 +84,37 @@ ax1.set_title("Mass Ratio Distributions", fontsize=18)
 a_min = st.slider("Orbital Minimum Separation (AU)", min_value=0.01, max_value=100.0, value=1.0)
 a_max = st.slider("Orbital Maximum Separation (AU)", min_value=0.01, max_value=1000.0, value=10.0)
 
+s_m =  np.log(10**1.21)    # Winters
+mu_m = np.log(10**mean_bd)                # Winters (x1.35 DM91)
+# ~ s_m = np.log(10**.47)        # Janson
+# ~ mu_m = np.log(10**.78)    # Janson
+# ~ s_m = np.log(10**0.97)            # Susemiehl
+# ~ mu_m = np.log(10**1.68)        #  Susemiehl
+s_fgk = np.log(10**1.68)
+mu_fgk = np.log(50)
+s_a = np.log(10**0.92)
+mu_a = np.log(522)            # De Rosa (x1.35 DM91)
+
 # Define orbital separation distributions for Brown Dwarfs and Giant Planets
 def orbital_dist_bd(a):
-    return (np.exp(-(np.log10(a) - mean_bd) ** 2 / (2 * sigma_bd ** 2))) / (np.sqrt(2 * np.pi) * sigma_bd)
+    return (np.exp(-(np.log(a) - mu_m) ** 2 / (2 * s_m ** 2))) #/ (np.sqrt(2 * np.pi) * s_m*a)
 
 def orbital_dist_pl(a):
-    return (np.exp(-(np.log10(a) - mu_pl) ** 2 / (2 * sigma_pl ** 2))) / (np.sqrt(2 * np.pi) * sigma_pl)
+    return (np.exp(-(np.log(a) - mu_natural) ** 2 / (2 * sigma_pl_ln ** 2))) #/ (np.sqrt(2 * np.pi) * sigma_pl_ln*a)
 
 # Create a log-scaled range for plotting
-a_values = np.logspace(-3, 3, 500)  # Values from 0.01 to 1000, log-scaled
+a_values = np.logspace(-6, 6, 500, base=2.71828)  # Values from 0.01 to 1000, log-scaled
 
 # Plotting the normalized distributions
-ax2.plot(np.log10(a_values), orbital_dist_bd(a_values), label='Brown Dwarf Model', color='r')
-ax2.plot(np.log10(a_values), orbital_dist_pl(a_values), label='Giant Planet Model', color='blue')
+ax2.plot(np.log(a_values), orbital_dist_bd(a_values), label='Brown Dwarf Model', color='r')
+ax2.plot(np.log(a_values), orbital_dist_pl(a_values), label='Giant Planet Model', color='blue')
 
 # Add vertical lines for min and max separations
-ax2.axvline(x=np.log10(a_min), color='green', linestyle='--', label=f'Min Separation = {a_min:.2f} AU')
-ax2.axvline(x=np.log10(a_max), color='purple', linestyle='--', label=f'Max Separation = {a_max:.2f} AU')
+ax2.axvline(x=np.log(a_min), color='green', linestyle='--', label=f'Min Separation = {a_min:.2f} AU')
+ax2.axvline(x=np.log(a_max), color='purple', linestyle='--', label=f'Max Separation = {a_max:.2f} AU')
 
 # Configure semi-major axis distribution plot
-ax2.set_xlabel('Semi-Major Axis (Log AU)', fontsize=20, labelpad=10.4)
+ax2.set_xlabel('Semi-Major Axis (ln AU)', fontsize=20, labelpad=10.4)
 ax2.set_ylabel('Probability Density', fontsize=20, labelpad=10.4)
 ax2.tick_params(axis='both', which='major', labelsize=15)
 ax2.legend(loc='upper left', fontsize=12)
@@ -113,21 +124,20 @@ ax2.set_title("Semi-Major Axis Distributions", fontsize=18)
 st.pyplot(fig)
 
 # Define the range for orbital distances and mass ratios using correct log_10 ranges
-mass_ratio_values = np.linspace(Jup_min * q_Jupiter,Jup_max * q_Jupiter, 500)
+mass_ratio_values = np.linspace(Jup_min * q_Jupiter, Jup_max * q_Jupiter, 500)
 a_values_m = np.linspace(a_min,a_max, 500)
 
 # Calculate frequency for Brown Dwarfs using integration with `np.trapz`
-f_bd = A_bd * np.trapz([orbital_dist_bd(a) for a in a_values_m], a_values_m) * \
+f_bd = A_bd * np.trapz([orbital_dist_bd(a)/(np.sqrt(2 * np.pi)*s_m*a) for a in a_values_m], a_values_m) * \
        np.trapz([d_q_i ** alpha_bd for d_q_i in mass_ratio_values], mass_ratio_values)
 
 # Re-run integration over corrected distribution ranges
-f_pl = A_pl * np.trapz([orbital_dist_pl(a)/(np.sqrt(2 * np.pi)*a) for a in a_values_m], a_values_m) * \
+f_pl = A_pl * np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a in a_values_m], a_values_m) * \
        np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
 
 # Display results in Streamlit
 st.text(f"Frequency of Planets: {f_pl}")
 st.text(f"Frequency of Brown Dwarfs: {f_bd}")
-
 
 ## Sub-Jupiter Model
 #st.subheader("Sub-Jupiters (< 1 MJ)")
