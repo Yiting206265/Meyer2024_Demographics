@@ -57,8 +57,8 @@ a2_gp = d_q ** -alpha_gp
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(17, 6))
 
 # Plotting normalized mass ratio distributions
-ax1.plot(a1, a2_bd, color='r', label='Brown Dwarf Model', linewidth=3)
-ax1.plot(a1, a2_gp, color='blue', label='Giant Planet Model', linewidth=3)
+ax1.plot(a1, a2_bd, color='r', label='Brown Dwarf Model')
+ax1.plot(a1, a2_gp, color='blue', label='Giant Planet Model')
 
 ax1.set_xscale('log')
 ax1.set_yscale('log')
@@ -93,7 +93,7 @@ def orbital_dist_pl(a):
     return (np.exp(-(np.log10(a) - mu_pl) ** 2 / (2 * sigma_pl ** 2))) / (np.sqrt(2 * np.pi) * sigma_pl)
 
 # Ensure you have a fine range for plotting
-a_values = np.linspace(0, 1000, 10000)  # Use logspace for better resolution
+a_values = np.linspace(0, 1000, 5000)  # Use logspace for better resolution
 ax2.plot(a_values, orbital_dist_bd(a_values), label='Brown Dwarf Model', color='r')
 ax2.plot(a_values, orbital_dist_pl(a_values), label='Giant Planet Model', color='blue')
 
@@ -114,15 +114,16 @@ ax2.set_title("Semi-Major Axis Distributions", fontsize=18)
 st.pyplot(fig)
 
 # Define the range for orbital distances and mass ratios using correct log_10 ranges
-mass_ratio_values = np.logspace(np.log10(Jup_min * q_Jupiter), np.log10(Jup_max * q_Jupiter), 500)
+mass_ratio_values = np.linspace(Jup_min * q_Jupiter,Jup_max * q_Jupiter, 500)
+a_values_m = np.linspace(a_min,a_max, 500)
 
 # Calculate frequency for Brown Dwarfs using integration with `np.trapz`
-f_bd = A_bd * np.trapz([orbital_dist_bd(a) for a in a_values], a_values) * \
+f_bd = A_bd * np.trapz([orbital_dist_bd(a) for a in a_values_m], a_values_m) * \
        np.trapz([d_q_i ** alpha_bd for d_q_i in mass_ratio_values], mass_ratio_values)
 
 # Re-run integration over corrected distribution ranges
-f_pl = A_pl * np.trapz([orbital_dist_pl(a) for a in a_values], a_values) * \
-       np.trapz([d_q_i ** -(alpha_gp-1) for d_q_i in mass_ratio_values], mass_ratio_values)
+f_pl = A_pl * np.trapz([orbital_dist_pl(a)/(np.sqrt(2 * np.pi)*a) for a in a_values_m], a_values_m) * \
+       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
 
 # Display results in Streamlit
 st.text(f"Frequency of Planets: {f_pl}")
