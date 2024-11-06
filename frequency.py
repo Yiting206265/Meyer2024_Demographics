@@ -129,7 +129,7 @@ st.write(f"Frequency of Brown Dwarfs:", f_bd)
 
 # Sub-Jupiter Model
 st.subheader("Sub-Jupiters (< 1 MJ)")
-st.write(f"For planets less than 1 Jupiter mass, we made a customized sub-Jupiter model where the orbital distribution within 7 AU is twice the giant planet model (Fulton 2021), but log-flat with a constant density beyond 7 AU.")
+st.write(f"For planets less than 1 Jupiter mass, we made a customized sub-Jupiter model where the orbital distribution within 10 AU doubles the giant planet model (Fulton 2021), but log-flat with a constant density beyond 10 AU.")
 
 # Create plots for both distributions side by side
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(17, 6))
@@ -158,8 +158,8 @@ ax1.set_title("Mass Ratio Distributions", fontsize=18)
 
 # Define orbital separation distributions for sub-Jupiters
 def orbital_dist_subJupiter(a):
-    if a <= 7:
-        return 2*(np.exp(-(np.log(a) - mu_natural) ** 2 / (2 * sigma_pl_ln ** 2)))#/(np.sqrt(2*np.pi)*sigma_pl_ln*a)
+    if a <= 10:
+        return 2*(np.exp(-(np.log(a) - mu_natural) ** 2/(2 * 2*sigma_pl_ln ** 2)))#/(np.sqrt(2*np.pi)*sigma_pl_ln*a)
     else:
         return 0.8430271150978883
 
