@@ -185,11 +185,25 @@ st.pyplot(fig)
 
 # Define the range for orbital distances and mass ratios using correct log_10 ranges
 mass_ratio_values = np.linspace(Jup_min * q_Jupiter, Jup_max * q_Jupiter, 500)
-a_values_m = np.linspace(a_min,a_max, 500)
-
-# Re-run integration over corrected distribution ranges
-f_subJ = A_pl * np.trapz([orbital_dist_subJupiter(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a in a_values_m], a_values_m) * \
+if a_min<=10 and a_max <=10:
+    a_values_m = np.linspace(a_min,a_max, 500)
+    f_subJ = A_pl * np.trapz([orbital_dist_subJupiter(a)/(np.sqrt(2*np.pi)*2*sigma_pl_ln*a) for a in a_values_m], a_values_m) * \
        np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
+elif a_min<=10 and a_max>10:
+    a_values_m1 = np.linspace(a_min,10, 500)
+    f_subJ1 = A_pl * np.trapz([orbital_dist_subJupiter(a)/(np.sqrt(2*np.pi)*2*sigma_pl_ln*a) for a in a_values_m1], a_values_m1) * \
+       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
+    a_values_m2 = np.linspace(10,a_max, 500)
+    f_subJ2 = A_pl * np.trapz([0.8430271150978883/(a*np.log(a_max/10)) for a in a_values_m2], a_values_m2) * \
+       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
+    f_subJ = f_subJ1 + f_subJ2
+elif a_min>10 and a_max >10:
+    a_values_m = np.linspace(a_min,a_max, 500)
+    f_subJ = A_pl * np.trapz([0.8430271150978883/(a*np.log(a_max/a_min)) for a in a_values_m], a_values_m) * \
+       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
+       
+# Re-run integration over corrected distribution ranges
+
 
 # Display results in Streamlit
 st.write(f"Frequency of Sub-Jupiters:", f_subJ)
