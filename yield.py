@@ -253,7 +253,7 @@ combined_bd_generated = np.zeros(n_real)
 combined_bd_detected = np.zeros(n_real)
 bd_detected_fraction = np.zeros(n_star)
 
-##START_run
+##START calculation
 p.model = p.model_bd = st.radio("Evol Model", ("BEX"))
 p.band = p.band_bd = st.radio("Filter Band", ("F356W","F444W","F1000W","F1500W","F2100W"))
 n_star = len(objnam)
