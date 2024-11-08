@@ -7,22 +7,22 @@ import matplotlib.pyplot as plt
 
 # Constants and model parameters for Brown Dwarfs
 A_bd_ln = -3.78
-mean_bd = 1.43   # log10
-sigma_bd = 1.21  # log10
+mean_bd = 1.43      #log10
+sigma_bd = 1.21     #log10
 A_bd = np.exp(A_bd_ln)
 alpha_bd = -0.36
 
 # Constants and model parameters for Giant Planets
 alpha_gp = 1.43
 A_pl_ln = -5.52
-mu_natural = 1.32     #ln
-sigma_pl_ln = 0.53    #ln
+mu_natural = 1.32   #ln
+sigma_pl_ln = 0.53  #ln
 A_pl = np.exp(A_pl_ln)
 
 # Conversion constant from natural log to log_10
 constant = 2.302585092994046
-mu_pl = mu_natural / constant  # log10
-sigma_pl = sigma_pl_ln / constant # log10
+mu_pl = mu_natural / constant     #log10
+sigma_pl = sigma_pl_ln / constant #log10
 
 # Display model parameters in Streamlit
 st.header("Two Component Model for Exoplanet and Brown Dwarf Companions (Meyer et al. 2024)")
@@ -34,7 +34,7 @@ Jup_min = st.slider("Companion Minimum Mass ($\mathrm{M_{Jup}}$)", min_value=0.0
 Jup_max = st.slider("Companion Maximum Mass ($\mathrm{M_{Jup}}$)", min_value=0.01, max_value=100.0, value=10.0)
 
 # Mass ratio calculations
-q_Jupiter = 0.001 / host_mass
+q_Jupiter = 0.001/host_mass
 d_q = np.logspace(-5, 3, 500)  # Mass ratios from 0.0001 to 1 on a logarithmic scale
 
 # Brown Dwarf model distribution (mass ratio)
@@ -166,7 +166,7 @@ def orbital_dist_subJupiter(a):
 # Create a log-scaled range for plotting
 a_values = np.logspace(-6, 10, 500, base=2.71828)  # Values from 0.01 to 1000, log-scaled
 sub_jupiter_values = [orbital_dist_subJupiter(a) for a in a_values]
-# Plotting the normalized distributions
+# Plotting the distributions
 ax2.plot(np.log(a_values), sub_jupiter_values, label='Sub-Jupiter Model', color='orange')
 
 # Add vertical lines for min and max separations

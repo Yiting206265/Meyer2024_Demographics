@@ -160,8 +160,7 @@ class generate_distributions():
 		if p.planet_sma == 'powerlaw':
 			self.adis = self.a**p.beta
 		elif p.planet_sma == 'lognormal':
-			self.adis = np.exp(-(np.log10(self.a)-p.median_loga)**2/2./(p.sigma)**2) # \
-				#/ (np.sqrt(2*np.pi) * p.sigma)		# Now consistent with BD?
+			self.adis = np.exp(-(np.log10(self.a)-p.median_loga)**2/2./(p.sigma)**2)/ (np.sqrt(2*np.pi) * p.sigma)		# Now consistent with BD?
 			# (2*np.pi*sigma1b*a) # =df/dr ### df/dlog(r) = alog(10)*r*df/dr
 		elif p.planet_sma == 'flat':
 			# ~ self.adis = np.ones(len(self.a)) * (1/(p.an_max_pl - p.an_min_pl))

@@ -19,52 +19,10 @@ import sys
 import os
 import importlib
 
-## Set the title of the app
-#st.title("Main")
-#
-## Create a sidebar for navigation
-#st.sidebar.title("Navigation")
-#page = st.sidebar.radio("Go to", ("Page 1", "Page 2", "Page 3"))
-#
-## Load the corresponding page based on selection
-#if page == "Page 1":
-#    import frequency
-#    importlib.reload(frequency)
-#elif page == "Page 2":
-#    import page2
-#    importlib.reload(page2)
-#    #page2.show()
-#elif page == "Page 3":
-#    import page3
-#    page3.show()
-
-
-## Create a sidebar for navigation
-#st.sidebar.title("Navigation")
-#page = st.sidebar.radio("Go to", ("Frequency", "Yield Prediction"))
-#
-## Load the corresponding page based on selection
-#if page == "Frequency":
-#    try:
-#        import frequency
-#        importlib.reload(frequency)
-#    except:
-#        pass
-#elif page == "Yield Prediction":
-#    try:
-#    
-#        import page2
-#        importlib.reload(page2)
-#    except:
-#        pass
-#elif page == "Page 3":
-#    import page3
-#    page3.show()
-
 pages = {
     "Demographics": [
-        st.Page("frequency.py", title="Frequency"),
-        st.Page("yield.py", title="Yield Prediction"),
+        st.Page("frequency.py", title="Frequency Calculator"),
+        st.Page("yield.py", title="Yield Calculator"),
     ]
 }
 

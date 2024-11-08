@@ -1,12 +1,9 @@
 ## Import modules
-##
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker
-from scipy import interpolate
+from scipy import interpolate, stats, integrate
 from astropy import constants as con
-from scipy import stats
-from scipy import integrate
 import pandas as pd
 import glob
 from bokeh.plotting import figure
@@ -17,32 +14,28 @@ import time
 import sys
 import os
 import json
-import pandas as pd
-import streamlit as st
-import matplotlib.pyplot as plt
-# Import separate file containing useful functions
-from functions_companion_predictions_JWST import *
 import scipy
+import streamlit as st
+from functions_companion_predictions_JWST import *
+
+# Ensure compatibility with np.trapz in case scipy.integrate.simps is unavailable
 if not hasattr(scipy.integrate, 'simps'):
     scipy.integrate.simps = np.trapz
 
 # Set the title of the app
-st.title("Yield Predictions")
+st.title("Yield Prediction")
 
 # File uploader for JSON file
 
 uploaded_file = st.file_uploader("Upload your JSON file. It should contain a big dictionary where the first-level keys are target names, the second-level keys are filter bands, and the third-level keys are pairs of 5-sigma contrast and separation values. An example can be found below:", type="json", key='up1')
 
-
+# Load the JSON data
 if uploaded_file is None:
     f = open('./files/calcons_06052024.json')
 else:
     f = uploaded_file
 
-#if uploaded_file is not None:
-    # Load the JSON data
 try:
-    
     calcons_json = json.load(f)
 
     # Display the data in a pandas DataFrame
@@ -88,7 +81,6 @@ except json.JSONDecodeError:
     st.error("Error loading JSON file. Please ensure it is correctly formatted.")
 except Exception as e:
     st.error(f"An error occurred: {e}")
-
     
 # File uploader for the input object file
 uploaded_file = st.file_uploader("Upload your target star file with the following information: stellar age, distance, stellar mass, and magnitude in a specific filter band.", type=["txt", "csv"], key='up2')
@@ -97,19 +89,14 @@ if uploaded_file is None:
     file = open('./files/mdwarfs_w1w2.txt')
 else:
     file = uploaded_file
-
-
 try:
     # Load the data into a DataFrame, assuming space-separated values
     df = pd.read_csv(file, delim_whitespace=True,header=0)
-
     # Display the DataFrame in Streamlit
     st.write("Data Preview:")
     st.dataframe(df)
-
 except Exception as e:
     st.error(f"An error occurred while reading the file: {e}")
-
 
 try:
     objnam = df['name']
@@ -135,22 +122,21 @@ p = input_pams()
 p.q_flag_bd = 1    # 1 == Yes for q-ratio, otherwise m will be in solar masses.
 p.q_flag_pl = 1
 #### PLANET PARAMETERS ###
-p.alpha = -1.39
-p.A_pl = np.exp(-5.28)  #1 Normalization Variable
+p.alpha = -1.43
+p.A_pl = np.exp(-5.52)  #1 Normalization Variable
 p.median_loga = 0.57 #SHINE Vigan 2021 #peak of log-normal distribution
-p.sigma = 0.73
+p.sigma = 0.23
 #### BD PARAMETERS ###
-p.A_bd = np.exp(-4.08)
-p.alpha_bd = 0.3 #was 0.25, depends on
+p.A_bd = np.exp(-3.78)
+p.alpha_bd = 0.36 #was 0.25, depends on
 p.median_loga_bd = 1.43   ## Extrapolated from Solar to BD
 p.sigma_bd = 1.21 #SPHERE SHINE survey
 
-st.write("Enter user input parameters, then click run for the simulation. Specify the normalization frequency within a certain separation-mass space. Then specify the limits for which the random companions will be generated.")
+st.write("Enter user input parameters, then click run for the simulations. Specify the normalization frequency within a certain separation-mass space. Then specify the limits for which the random companions will be generated.")
 
 #user input
 # Number of real planets
 p.n_real = st.slider("Number of Surveys/Realizations", min_value=1, max_value=10000, value=100)
-
 
 # Normalization bounds for planets
 st.subheader("Normalization Bounds for Planets")
@@ -176,7 +162,6 @@ p.m_max_pl = st.slider("Maximum Simulation Planet Mass ($M_{Jup}$)", min_value=0
 p.m_min_pl = p.m_min_pl*0.0009545942
 p.m_max_pl = p.m_max_pl*0.0009545942
 
-
 # BD limits
 st.subheader("Normalization Bounds for Brown Dwarfs")
 p.P_bd = st.number_input("Brown Dwarf Frequency",  0.01, None, step=None, format=None, key=None)
@@ -199,19 +184,50 @@ p.m_max_bd*=0.0009545942
 p.a_min_bd = st.slider("Minimum Simulation BD Semi-Major Axis (AU)", min_value=0.0, max_value=100.0, value=0.0)
 p.a_max_bd = st.slider("Maximum Simulation BD Semi-Major Axis (AU)", min_value=0.0, max_value=200.0, value=108.0)
 
+#Let user choose model assumptions
 st.subheader("Model Assumptions")
-st.write("The mass distributions are assumed to be power-law with index of 1.39 and 0.3 for planets and brown dwarfs, repectively, from Meyer 2024.")
-p.bd_sma = st.radio("Brown Dwarf SMA Distribution:", ("lognormal", "logflat"))
-p.planet_sma = st.radio("Planet SMA Distribution:", ("lognormal", "logflat"))
+st.write("The mass distributions are assumed to be power-law with index of 1.43 and 0.36 for planets and brown dwarfs, repectively, from Meyer 2024.")
+pl_type = st.radio("Planet Model:", ("Super-Jupiter (> 1 MJ)", "Sub-Jupiter (< 1 MJ)"))
 
-#p.output_file = 'results_Kellen_superJ.dat'
+if pl_type == "Super-Jupiter (> 1 MJ)":
+    p.planet_sma = "lognormal"
+elif pl_type == "Sub-Jupiter (< 1 MJ)":
+    p.planet_sma = "flat"
 
 #############################################
 # Generating masses, SMAs, eccentricities and inclinations
 d = generate_distributions(p)
 
-if p.planet_sma == 'logflat':
-    d.adis = 1 / (d.a * np.log10(p.a_max_pl / p.a_min_pl))    # Restructure sma distribution after normalizing
+#if p.planet_sma == 'flat':
+#    d.adis = 1 / (d.a * np.log10(p.a_max_pl / p.a_min_pl))  # Restructure sma distribution after normalizing
+
+mu_natural = 1.32   #ln
+sigma_pl_ln = 0.53  #ln
+
+def orbital_dist_subJupiter(a):
+    if a <= 10:
+        return 2*(np.exp(-(np.log10(a) - p.median_loga) ** 2/(2 * 2*p.sigma ** 2)))#/(np.sqrt(2*np.pi)*sigma_pl_ln*a)
+    else:
+        return 0.8430271150978883
+        
+if p.planet_sma == 'flat':
+    a_min = p.a_min_pl
+    a_max = p.a_max_pl
+
+    if a_min<=10 and a_max <=10:
+        a_values_m = np.linspace(a_min,a_max, 1000)#/(np.sqrt(2*np.pi)*2*p.sigma*a)
+        adis =  [orbital_dist_subJupiter(a) for a in a_values_m]
+    elif a_min<=10 and a_max>10:
+        a_values_m1 = np.linspace(a_min,10, 500)#/(np.sqrt(2*np.pi)*2*p.sigma*a)
+        f_subJ1 =  [orbital_dist_subJupiter(a) for a in a_values_m1]
+        a_values_m2 = np.linspace(10,a_max, 500)
+        f_subJ2 = [0.8430271150978883/(a*np.log(a_max/10)) for a in a_values_m2]
+        adis = list(f_subJ1) + list(f_subJ2)
+    elif a_min>10 and a_max >10:
+        a_values_m = np.linspace(a_min,a_max, 1000)
+        adis = [0.8430271150978883/(a*np.log(a_max/a_min)) for a in a_values_m]
+        
+    adis_flat = np.array(adis)
 
 ## Generating and detecing planet and BD properties ##
 ######################################################
@@ -237,20 +253,10 @@ combined_bd_generated = np.zeros(n_real)
 combined_bd_detected = np.zeros(n_real)
 bd_detected_fraction = np.zeros(n_star)
 
-### Check if output directory exists, otherwise create it
-#if not os.path.exists(output_path):
-#    os.makedirs(output_path)
-#    print("Created output path in:", output_path)
-#    
-
 ##START_run
-p.model = p.model_bd = st.radio("Evol Model", ("BEX", "Placeholder"))
-p.band = p.band_bd = st.radio("Filter Band", ("F444W", "Placeholder"))
+p.model = p.model_bd = st.radio("Evol Model", ("BEX"))
+p.band = p.band_bd = st.radio("Filter Band", ("F356W","F444W","F1000W","F1500W","F2100W"))
 n_star = len(objnam)
-
-
-pl_yield = []
-bd_yield = []
 
 import random
 import numpy as np
@@ -270,12 +276,6 @@ if st.button('Run'):
     
     Fout.write("# mag_pl    log_mass    log_q    log_a    d_au    sep_as    incl    ecc    flag    ii    jj\n")
     Fout1.write("# mag_pl    log_mass    log_q    log_a    d_au    sep_as    incl    ecc    flag    ii    jj\n")
-        
-#    except Exception as e:
-#        print(e)
-#    finally:
-#        Fout.close()  # Ensure the file is closed
-#
 
     for ii in range(0, n_star):
         # Estimate time until completion (SD)
@@ -285,7 +285,7 @@ if st.button('Run'):
         ## BD probability
         #####
         #### Scaling BD mass-distribution with host star mass  ####
-        mdis_bd=d.m**p.alpha_bd
+        mdis_bd=d.m**(-p.alpha_bd)
         ## Choose mass- or mass-ratio distribution
         if p.q_flag_bd == 1:
             d.q = (d.m/star_mass[ii])
@@ -314,10 +314,9 @@ if st.button('Run'):
         ## Planet probability
         #####
         if p.planet_sma == 'flat':
-            adis_pl = 1 / (d.a * np.log10(p.a_max_pl / p.a_min_pl))
+            adis_pl = d.adis
         else:
             adis_pl = d.adis
-
 
         if p.q_flag_pl == 1:
             qdis_pl = d.mdis_ref.val * star_mass[ii]**-p.alpha
@@ -327,7 +326,7 @@ if st.button('Run'):
             if p.planet_sma == 'flat':
                 Ppl = prob_mean(d.q, qdis_pl, d.a, adis_pl, p.m_min_pl/star_mass[ii], p.m_max_pl/star_mass[ii],
                 p.a_min_pl, p.a_max_pl, d.k_pl, p)        # Removed p.m_max_pl and now going for 0.1*star_mass[ii] of star mass
-        
+                #print(Ppl.P_mean) #planet frequency
         #####
         ## Importing contrast curves and evolutionary models
         #####
@@ -344,15 +343,31 @@ if st.button('Run'):
         if p.model_bd == 'BEX':
             modint_bd = interpol_mod_BEX('./models/BEX_evol_mags_-2_MH_0.00.dat', age_pl)
             mass_bd = modint_bd.mass_pl
-            if p.band_bd == 'F444W':
-                mag_band_bd = modint_bd.modint[22]  #25: F1000W, 22: F444W, 21: F356W, 10:M band
+            if p.band_bd == 'F356W':
+                mag_band_bd = modint_bd.modint[21]  #25: F1000W, 22: F444W, 21: F356W, 10:M band
+            elif p.band_bd == 'F444W':
+                mag_band_bd = modint_bd.modint[22]
+            elif p.band_bd == 'F1000W':
+                mag_band_bd = modint_bd.modint[25]
+            elif p.band_bd == 'F1500W':
+                mag_band_bd = modint_bd.modint[27]
+            elif p.band_bd == 'F2100W':
+                mag_band_bd = modint_bd.modint[29]
 
     #change-new-
         if p.model == 'BEX':
             modint = interpol_mod_BEX('./models/BEX_evol_mags_-2_MH_0.00.dat', age_pl)
             mass_pl = modint.mass_pl
-            if p.band == 'F444W':
-                mag_band = modint.modint[22]  #25: F1000W, 22: F444W, 21: F356W, 10:M band
+            if p.band == 'F356W':
+                mag_band = modint.modint[21]  #25: F1000W, 22: F444W, 21: F356W, 10:M band
+            elif p.band == 'F444W':
+                mag_band = modint.modint[22]
+            elif p.band == 'F1000W':
+                mag_band = modint.modint[25]
+            elif p.band == 'F1500W':
+                mag_band = modint.modint[27]
+            elif p.band == 'F2100W':
+                mag_band = modint.modint[29]
 
     #########################################################################
         # Print probabilities
@@ -471,11 +486,10 @@ if st.button('Run'):
                 combined_bd_detected[jj]+=1
                 bd_detected_fraction[ii]+=bd_detection[jj]
             bd_detection[jj]=0
-try:
+            
     Fout.close()
     Fout1.close()
-except:
-    pass
+
 ##
 
 #    #######################
@@ -515,158 +529,184 @@ n_real = p.n_real
 dat_pl = np.genfromtxt('./PL_out.dat', names=True)
 dat_bd = np.genfromtxt('./BD_out.dat', names=True)
 
-flag_pl = dat_pl['flag']
-flag_bd = dat_bd['flag']
-jj_pl = dat_pl['jj']
-jj_bd = dat_bd['jj']
-lm_pl = dat_pl['log_mass']
-lm_bd = dat_bd['log_mass']
-la_pl = dat_pl['log_a']
-la_bd = dat_bd['log_a']
-la_as_pl = dat_pl['sep_as']
-la_as_bd = dat_bd['sep_as']
-mag_pl = dat_pl['mag_pl']
-mag_bd = dat_bd['mag_pl']
+# Convert to pandas DataFrame for easier saving
+df_pl = pd.DataFrame(dat_pl)
+df_bd = pd.DataFrame(dat_bd)
 
-# Planets
+# Save DataFrames as temporary CSV files and provide download buttons
+df_pl_csv = df_pl.to_csv(index=False).encode('utf-8')
+df_bd_csv = df_bd.to_csv(index=False).encode('utf-8')
 
-gen_pl = np.append(np.where(flag_pl == 0)[0], np.where(flag_pl == 1)[0])
-gen_pl = np.append(gen_pl, np.where(flag_pl == 6)[0])
-gen_pl = np.append(gen_pl, np.where(flag_pl == 7)[0])
+# Download buttons
+st.download_button(
+    label="Download Planets Data",
+    data=df_pl_csv,
+    file_name="PL_out.csv",
+    mime="text/csv"
+)
 
-det_pl1 = np.where(flag_pl == 1)[0]
-det_pl2 = np.where(flag_pl == 7)[0]
-det_pl = np.append(det_pl1, det_pl2)
+st.download_button(
+    label="Download BD Data",
+    data=df_bd_csv,
+    file_name="BD_out.csv",
+    mime="text/csv"
+)
 
-nr_pl = int(n*(len(det_pl) / len(gen_pl)))        # n-ratio planets
-rg_pl = np.unique(np.random.choice(gen_pl, n))          # Random generated
-rd_pl = np.unique(np.random.choice(det_pl, nr_pl))       # Random detected
+try:
+    flag_pl = dat_pl['flag']
+    flag_bd = dat_bd['flag']
+    jj_pl = dat_pl['jj']
+    jj_bd = dat_bd['jj']
+    lm_pl = dat_pl['log_mass']
+    lm_bd = dat_bd['log_mass']
+    la_pl = dat_pl['log_a']
+    la_bd = dat_bd['log_a']
+    la_as_pl = dat_pl['sep_as']
+    la_as_bd = dat_bd['sep_as']
+    mag_pl = dat_pl['mag_pl']
+    mag_bd = dat_bd['mag_pl']
 
-#----------------------------------------------------------------------
-#BDs
-gen_bd = np.append(np.where(flag_bd == 2)[0], np.where(flag_bd == 3)[0])
-gen_bd = np.append(gen_bd, np.where(flag_bd == 8)[0])
-gen_bd = np.append(gen_bd, np.where(flag_bd == 9)[0])
+    # Planets
 
-det_bd1 = np.where(flag_bd == 3)[0]
-det_bd2 = np.where(flag_bd == 9)[0]
-det_bd = np.append(det_bd1, det_bd2)
+    gen_pl = np.append(np.where(flag_pl == 0)[0], np.where(flag_pl == 1)[0])
+    gen_pl = np.append(gen_pl, np.where(flag_pl == 6)[0])
+    gen_pl = np.append(gen_pl, np.where(flag_pl == 7)[0])
 
-nr_bd = int(n*(len(det_bd) / len(gen_bd)))        # n-ratio planets
-rg_bd = np.unique(np.random.choice(gen_bd, n))          # Random generated
-rd_bd = np.unique(np.random.choice(det_bd, nr_bd))       # Random detected
+    det_pl1 = np.where(flag_pl == 1)[0]
+    det_pl2 = np.where(flag_pl == 7)[0]
+    det_pl = np.append(det_pl1, det_pl2)
 
-# ----------------------------------------------------------------------
+    nr_pl = int(n*(len(det_pl) / len(gen_pl)))        # n-ratio planets
+    rg_pl = np.unique(np.random.choice(gen_pl, n))          # Random generated
+    rd_pl = np.unique(np.random.choice(det_pl, nr_pl))       # Random detected
 
-# Convert to earht masses  10**log_mass[rn_pl] * 332946 # Mearth
+    #----------------------------------------------------------------------
+    #BDs
+    gen_bd = np.append(np.where(flag_bd == 2)[0], np.where(flag_bd == 3)[0])
+    gen_bd = np.append(gen_bd, np.where(flag_bd == 8)[0])
+    gen_bd = np.append(gen_bd, np.where(flag_bd == 9)[0])
 
-#Plotting planets
+    det_bd1 = np.where(flag_bd == 3)[0]
+    det_bd2 = np.where(flag_bd == 9)[0]
+    det_bd = np.append(det_bd1, det_bd2)
 
-source_generated = ColumnDataSource(data={'separation': la_as_pl[gen_pl], 'magnitude': mag_pl[gen_pl]})
-source_detected = ColumnDataSource(data={'separation': la_as_pl[det_pl], 'magnitude': mag_pl[det_pl]})
+    nr_bd = int(n*(len(det_bd) / len(gen_bd)))        # n-ratio planets
+    rg_bd = np.unique(np.random.choice(gen_bd, n))          # Random generated
+    rd_bd = np.unique(np.random.choice(det_bd, nr_bd))       # Random detected
 
-# Initialize the Bokeh figure
-p = figure(title="Planets",
-           x_axis_label="Separation (arcseconds)", y_axis_label="Apparent Magnitude",
-           x_axis_type="log", y_range=(27, 0), width=800, height=400)
+    # ----------------------------------------------------------------------
 
-# Plot generated and detected planets
-p.circle('separation', 'magnitude', source=source_generated, color="black", size=7, alpha=0.2, legend_label=f"# Generated: {len(gen_pl)}")
-p.circle('separation', 'magnitude', source=source_detected, color="red", size=7, alpha=0.2, legend_label=f"# Detected: {len(det_pl)}")
+    # Convert to earht masses  10**log_mass[rn_pl] * 332946 # Mearth
 
-# Plot contrast curves from contr_sep_arr and contr_mag_arr
-for i in range(len(contr_sep_arr)):
-    source_contrast = ColumnDataSource(data={'separation': contr_sep_arr[i], 'magnitude': contr_mag_arr[i]})
-    p.line('separation', 'magnitude', source=source_contrast, color="grey", line_width=1.5, alpha=0.6)
+    #Plotting planets
 
-# Customize appearance
-p.legend.title = "Legend"
-p.legend.location = "top_right"
-p.xaxis.axis_label_text_font_size = "12pt"
-p.yaxis.axis_label_text_font_size = "12pt"
+    source_generated = ColumnDataSource(data={'separation': la_as_pl[gen_pl], 'magnitude': mag_pl[gen_pl]})
+    source_detected = ColumnDataSource(data={'separation': la_as_pl[det_pl], 'magnitude': mag_pl[det_pl]})
 
-# Display the plot in Streamlit
-st.bokeh_chart(p)
+    # Initialize the Bokeh figure
+    p = figure(title="Planets - "+pl_type,
+               x_axis_label="Separation (arcseconds)", y_axis_label="Apparent Magnitude",
+               x_axis_type="log", y_range=(27, 0), width=800, height=400)
 
-#Plotting BDs
+    # Plot generated and detected planets
+    p.circle('separation', 'magnitude', source=source_generated, color="black", size=7, alpha=0.2, legend_label=f"# Generated: {len(gen_pl)}")
+    p.circle('separation', 'magnitude', source=source_detected, color="red", size=7, alpha=0.2, legend_label=f"# Detected: {len(det_pl)}")
 
-source_generated = ColumnDataSource(data={'separation': la_as_bd[gen_bd], 'magnitude': mag_bd[gen_bd]})
-source_detected = ColumnDataSource(data={'separation': la_as_bd[det_bd], 'magnitude': mag_bd[det_bd]})
+    # Plot contrast curves from contr_sep_arr and contr_mag_arr
+    for i in range(len(contr_sep_arr)):
+        source_contrast = ColumnDataSource(data={'separation': contr_sep_arr[i], 'magnitude': contr_mag_arr[i]})
+        p.line('separation', 'magnitude', source=source_contrast, color="grey", line_width=1.5, alpha=0.6)
 
-# Initialize the Bokeh figure
-p = figure(title="Brown Dwarfs",
-           x_axis_label="Separation (arcseconds)", y_axis_label="Apparent Magnitude",
-           x_axis_type="log", y_range=(27, 0), width=800, height=400)
+    # Customize appearance
+    p.legend.title = "Legend"
+    p.legend.location = "top_right"
+    p.xaxis.axis_label_text_font_size = "12pt"
+    p.yaxis.axis_label_text_font_size = "12pt"
 
-# Plot generated and detected planets
-p.circle('separation', 'magnitude', source=source_generated, color="black", size=7, alpha=0.2, legend_label=f"# Generated: {len(gen_bd)}")
-p.circle('separation', 'magnitude', source=source_detected, color="red", size=7, alpha=0.2, legend_label=f"# Detected: {len(det_bd)}")
+    # Display the plot in Streamlit
+    st.bokeh_chart(p)
 
-# Plot contrast curves from contr_sep_arr and contr_mag_arr
-for i in range(len(contr_sep_arr)):
-    source_contrast = ColumnDataSource(data={'separation': contr_sep_arr[i], 'magnitude': contr_mag_arr[i]})
-    p.line('separation', 'magnitude', source=source_contrast, color="grey", line_width=1.5, alpha=0.6)
+    #Plotting BDs
 
-# Customize appearance
-p.legend.title = "Legend"
-p.legend.location = "top_right"
-p.xaxis.axis_label_text_font_size = "12pt"
-p.yaxis.axis_label_text_font_size = "12pt"
+    source_generated = ColumnDataSource(data={'separation': la_as_bd[gen_bd], 'magnitude': mag_bd[gen_bd]})
+    source_detected = ColumnDataSource(data={'separation': la_as_bd[det_bd], 'magnitude': mag_bd[det_bd]})
 
-# Display the plot in Streamlit
-st.bokeh_chart(p)
+    # Initialize the Bokeh figure
+    p = figure(title="Brown Dwarfs",
+               x_axis_label="Separation (arcseconds)", y_axis_label="Apparent Magnitude",
+               x_axis_type="log", y_range=(27, 0), width=800, height=400)
+
+    # Plot generated and detected planets
+    p.circle('separation', 'magnitude', source=source_generated, color="black", size=7, alpha=0.2, legend_label=f"# Generated: {len(gen_bd)}")
+    p.circle('separation', 'magnitude', source=source_detected, color="red", size=7, alpha=0.2, legend_label=f"# Detected: {len(det_bd)}")
+
+    # Plot contrast curves from contr_sep_arr and contr_mag_arr
+    for i in range(len(contr_sep_arr)):
+        source_contrast = ColumnDataSource(data={'separation': contr_sep_arr[i], 'magnitude': contr_mag_arr[i]})
+        p.line('separation', 'magnitude', source=source_contrast, color="grey", line_width=1.5, alpha=0.6)
+
+    # Customize appearance
+    p.legend.title = "Legend"
+    p.legend.location = "top_right"
+    p.xaxis.axis_label_text_font_size = "12pt"
+    p.yaxis.axis_label_text_font_size = "12pt"
+
+    # Display the plot in Streamlit
+    st.bokeh_chart(p)
 
 
-# Set up your Streamlit application
-st.subheader("Detection Probability Distribution")
-jj_pl = np.random.randint(0, n_real, size=n_real)  # Example data
-jj_bd = np.random.randint(0, n_real, size=n_real)  # Example data
-flag_pl = np.random.randint(0, 8, size=n_real)     # Example data
-flag_bd = np.random.randint(0, 10, size=n_real)    # Example data
+    # Set up your Streamlit application
+    st.subheader("Detection Probability Distribution")
+    jj_pl = np.random.randint(0, n_real, size=n_real)  # Example data
+    jj_bd = np.random.randint(0, n_real, size=n_real)  # Example data
+    flag_pl = np.random.randint(0, 8, size=n_real)     # Example data
+    flag_bd = np.random.randint(0, 10, size=n_real)    # Example data
 
-# Initialize arrays for detected and undetected planets
-w_pl = []      # detected planets
-w_bd = []
-z_pl = []     # undetected planets
-z_bd = []
+    # Initialize arrays for detected and undetected planets
+    w_pl = []      # detected planets
+    w_bd = []
+    z_pl = []     # undetected planets
+    z_bd = []
 
-# Populate w_pl, w_bd, z_pl, z_bd
-for i in range(n_real):
-    jj_ipl = np.where(jj_pl == i)[0]
-    jj_ibd = np.where(jj_bd == i)[0]
-    
-    # Undetected
-    ud_ipl = np.where(flag_pl[jj_ipl] == 0)[0]
-    ud_ibd = np.where(flag_bd[jj_ibd] == 2)[0]
-    z_pl.append(len(ud_ipl))
-    z_bd.append(len(ud_ibd))
+    # Populate w_pl, w_bd, z_pl, z_bd
+    for i in range(n_real):
+        jj_ipl = np.where(jj_pl == i)[0]
+        jj_ibd = np.where(jj_bd == i)[0]
+        
+        # Undetected
+        ud_ipl = np.where(flag_pl[jj_ipl] == 0)[0]
+        ud_ibd = np.where(flag_bd[jj_ibd] == 2)[0]
+        z_pl.append(len(ud_ipl))
+        z_bd.append(len(ud_ibd))
 
-    # Detected
-    d_ipl1 = np.where(flag_pl[jj_ipl] == 1)[0]
-    d_ipl2 = np.where(flag_pl[jj_ipl] == 7)[0]
-    d_ipl = np.append(d_ipl1, d_ipl2)
-    d_ibd1 = np.where(flag_bd[jj_ibd] == 3)[0]
-    d_ibd2 = np.where(flag_bd[jj_ibd] == 9)[0]
-    d_ibd = np.append(d_ibd1, d_ibd2)
-    
-    w_pl.append(len(d_ipl))
-    w_bd.append(len(d_ibd))
+        # Detected
+        d_ipl1 = np.where(flag_pl[jj_ipl] == 1)[0]
+        d_ipl2 = np.where(flag_pl[jj_ipl] == 7)[0]
+        d_ipl = np.append(d_ipl1, d_ipl2)
+        d_ibd1 = np.where(flag_bd[jj_ibd] == 3)[0]
+        d_ibd2 = np.where(flag_bd[jj_ibd] == 9)[0]
+        d_ibd = np.append(d_ibd1, d_ibd2)
+        
+        w_pl.append(len(d_ipl))
+        w_bd.append(len(d_ibd))
 
-# Outside of for-loop, make some statistics
-pp = np.array(w_pl) + np.array(w_bd)
+    # Outside of for-loop, make some statistics
+    pp = np.array(w_pl) + np.array(w_bd)
 
-# Detection Probability Distribution
-bb = np.arange(31) - 0.5
-hh1 = np.histogram(pp, bins=bb, density=True)
+    # Detection Probability Distribution
+    bb = np.arange(31) - 0.5
+    hh1 = np.histogram(pp, bins=bb, density=True)
 
-# Create the first plot
+    # Create the first plot
 
-fig1, ax1 = plt.subplots()
-ax1.hist(w_pl, bins=hh1[1], density=True, color='g', alpha=.3, label='Detected Planets')
-ax1.hist(w_bd, bins=bb, density=True, color='red', alpha=.3, label='Detected BDs')
-ax1.plot(hh1[0], '.-', label='Histogram')
-ax1.set_ylabel('PDF', fontsize=18)
-ax1.set_xlabel('# Detections', fontsize=18)
-ax1.set_xlim([-0.5, 5])
-ax1.legend()
-st.pyplot(fig1)
+    fig1, ax1 = plt.subplots()
+    ax1.hist(w_pl, bins=hh1[1], density=True, color='g', alpha=.3, label='Detected Planets')
+    ax1.hist(w_bd, bins=bb, density=True, color='red', alpha=.3, label='Detected BDs')
+    ax1.plot(hh1[0], '.-', label='Histogram')
+    ax1.set_ylabel('PDF', fontsize=18)
+    ax1.set_xlabel('# Detections', fontsize=18)
+    ax1.set_xlim([-0.5, 5])
+    ax1.legend()
+    st.pyplot(fig1)
+except:
+    pass
