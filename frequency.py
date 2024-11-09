@@ -38,7 +38,7 @@ q_Jupiter = 0.001/host_mass
 d_q = np.logspace(-5, 3, 500)  # Mass ratios from 0.0001 to 1 on a logarithmic scale
 
 # Brown Dwarf model distribution (mass ratio)
-a2_bd = d_q ** alpha_bd
+a2_bd = d_q ** -alpha_bd
 
 # Giant Planet model distribution (mass ratio)
 a2_gp = d_q ** -alpha_gp
