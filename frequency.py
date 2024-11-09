@@ -117,7 +117,7 @@ a_values_m = np.linspace(a_min,a_max, 500)
 
 # Calculate frequency for Brown Dwarfs using integration with `np.trapz`
 f_bd = A_bd * np.trapz([orbital_dist_bd(a)/(np.sqrt(2 * np.pi)*s_m*a) for a in a_values_m], a_values_m) * \
-       np.trapz([d_q_i ** alpha_bd for d_q_i in mass_ratio_values], mass_ratio_values)
+       np.trapz([d_q_i ** -alpha_bd for d_q_i in mass_ratio_values], mass_ratio_values)
 
 # Re-run integration over corrected distribution ranges
 f_pl = A_pl * np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a in a_values_m], a_values_m) * \
