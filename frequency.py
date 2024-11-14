@@ -31,7 +31,7 @@ st_type = st.radio("Choose the Stellar Spectral Type:", ("M Dwarfs", "FGK", "A S
 # User input for mass parameters
 host_mass = st.number_input("Host Mass ($\mathrm{M_{\odot}}$)", 0.01, value=1.0)
 Jup_min = st.slider("Companion Minimum Mass ($\mathrm{M_{Jup}}$)", min_value=0.01, max_value=50.0, value=1.0)
-Jup_max = st.slider("Companion Maximum Mass ($\mathrm{M_{Jup}}$)", min_value=0.01, max_value=100.0, value=10.0)
+Jup_max = st.slider("Companion Maximum Mass ($\mathrm{M_{Jup}}$)", min_value=0.01, max_value=1000.0, value=10.0)
 
 # Mass ratio calculations
 q_Jupiter = 0.001/host_mass
@@ -124,8 +124,7 @@ f_pl = A_pl * np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for 
        np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
 
 # Display results in Streamlit
-st.write(f"Frequency of Planets:", f_pl)
-st.write(f"Frequency of Brown Dwarfs:", f_bd)
+st.write(f"Mean Number of Companion Per Star:", f_pl+f_bd)
 
 # Sub-Jupiter Model
 st.subheader("Sub-Jupiters (< 1 MJ)")
@@ -206,4 +205,4 @@ elif a_min>10 and a_max >10:
 
 
 # Display results in Streamlit
-st.write(f"Frequency of Sub-Jupiters:", f_subJ)
+st.write(f"Mean Number of Sub-Jupiters Per Star:", f_subJ)
