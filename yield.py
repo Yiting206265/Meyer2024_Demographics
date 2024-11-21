@@ -142,8 +142,8 @@ p.n_real = st.slider("Number of Surveys/Realizations", min_value=1, max_value=10
 st.subheader("Normalization Bounds for Planets")
 # Planet frequency
 p.P_pl = st.number_input("Planet Frequency",  0.01, None, step=None, format=None, key=None)
-p.an_min_pl = st.slider("Minimum Planet Separation (AU)", min_value=0.01, max_value=1000.0, value=0.01)
-p.an_max_pl = st.slider("Maximum Planet Separation (AU)", min_value=1.0, max_value=1000.0, value=100.0)
+p.an_min_pl = st.slider("Minimum Planet Separation (AU)", min_value=0.001, max_value=1000.0, value=0.01)
+p.an_max_pl = st.slider("Maximum Planet Separation (AU)", min_value=0.001, max_value=1000.0, value=100.0)
 
 # Minimum and maximum planet mass (in solar masses)
 p.mn_min_pl = st.slider("Minimum Planet Mass ($M_{Jup}$)", min_value=0.001, max_value=200.0, value=1.0)
@@ -166,7 +166,7 @@ p.m_max_pl = p.m_max_pl*0.0009545942
 st.subheader("Normalization Bounds for Brown Dwarfs")
 p.P_bd = st.number_input("Brown Dwarf Frequency",  0.01, None, step=None, format=None, key=None)
 p.an_min_bd = st.slider("Minimum BD Separation (AU)", min_value=0.0, max_value=10.0, value=0.0)
-p.an_max_bd = st.slider("Maximum BD Separation (AU)", min_value=1.0, max_value=150.0, value=108.91175375)
+p.an_max_bd = st.slider("Maximum BD Separation (AU)", min_value=1.0, max_value=1000.0, value=108.91175375)
 p.mn_min_bd = st.slider("Minimum BD Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=3.0)
 p.mn_max_bd = st.slider("Maximum BD Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=100.0)
 p.mn_min_bd *=0.0009545942
@@ -221,11 +221,11 @@ if p.planet_sma == 'flat':
         a_values_m1 = np.linspace(a_min,10, 500)#/(np.sqrt(2*np.pi)*2*p.sigma*a)
         f_subJ1 =  [orbital_dist_subJupiter(a) for a in a_values_m1]
         a_values_m2 = np.linspace(10,a_max, 500)
-        f_subJ2 = [0.8430271150978883/(a*np.log(a_max/10)) for a in a_values_m2]
+        f_subJ2 = [1.13/(a*np.log(a_max/10)) for a in a_values_m2]
         adis = list(f_subJ1) + list(f_subJ2)
     elif a_min>10 and a_max >10:
         a_values_m = np.linspace(a_min,a_max, 1000)
-        adis = [0.8430271150978883/(a*np.log(a_max/a_min)) for a in a_values_m]
+        adis = [1.13/(a*np.log(a_max/a_min)) for a in a_values_m]
         
     adis_flat = np.array(adis)
 
@@ -297,7 +297,7 @@ if st.button('Run'):
             intm = integrate.simps(mdis_bd[i], np.log10(d.m[i]))
         j = np.where( (d.a>= p.an_min_bd) & (d.a<= p.an_max_bd))[0]
         inta = integrate.simps(d.adis_bd[j], np.log10(d.a[j]))
-        k_bd = p.P_bd/(intm*inta)
+        k_bd = 1/p.A_bd#p.P_bd/(intm*inta)
         # Can't have companion mass greater than stellar mass
         if p.m_max_bd > star_mass[ii]:
             tmp_m_max_bd = star_mass[ii]
@@ -322,10 +322,10 @@ if st.button('Run'):
             qdis_pl = d.mdis_ref.val * star_mass[ii]**-p.alpha
             if p.planet_sma == 'lognormal':
                 Ppl = prob_mean(d.q, qdis_pl, d.a, adis_pl, p.m_min_pl/star_mass[ii], p.m_max_pl/star_mass[ii],
-                p.a_min_pl, p.a_max_pl, d.k_pl, p)         # Removed p.m_max_pl and now going for 0.1*star_mass[ii] of star mass
+                p.a_min_pl, p.a_max_pl, d.k_pl*10, p)         # Removed p.m_max_pl and now going for 0.1*star_mass[ii] of star mass
             if p.planet_sma == 'flat':
                 Ppl = prob_mean(d.q, qdis_pl, d.a, adis_pl, p.m_min_pl/star_mass[ii], p.m_max_pl/star_mass[ii],
-                p.a_min_pl, p.a_max_pl, d.k_pl, p)        # Removed p.m_max_pl and now going for 0.1*star_mass[ii] of star mass
+                p.a_min_pl, p.a_max_pl, d.k_pl*10, p)        # Removed p.m_max_pl and now going for 0.1*star_mass[ii] of star mass
                 #print(Ppl.P_mean) #planet frequency
         #####
         ## Importing contrast curves and evolutionary models
