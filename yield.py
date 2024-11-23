@@ -25,9 +25,9 @@ if not hasattr(scipy.integrate, 'simps'):
 # Set the title of the app
 st.title("Yield Prediction")
 
+##############################################################################################################
 # File uploader for JSON file
-
-uploaded_file = st.file_uploader("Upload your JSON file. It should contain a big dictionary where the first-level keys are target names, the second-level keys are filter bands, and the third-level keys are pairs of 5-sigma contrast and separation values. An example can be found below:", type="json", key='up1')
+uploaded_file = st.file_uploader("Upload your JSON file. It should contain a big dictionary where the first-level keys are target names, the second-level keys are filter bands, and the third-level keys are pairs of 5-sigma contrast (named '5sig_maskmag') and separation values (named 'seps_arcsec'). An example can be found below:", type="json", key='up1')
 
 # Load the JSON data
 if uploaded_file is None:
@@ -47,7 +47,7 @@ try:
     names = df.index.tolist()  # Get the names from the DataFrame index
 
     # Create a figure for plotting
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(8, 5))
 
     # Initialize lists for storing separation and sensitivity
     sep = []
@@ -62,7 +62,7 @@ try:
         mag_sens.append(sensitivity_mag)
 
     # Customize the plot
-    ax.legend()
+    ax.legend(fontsize=10)
     ax.invert_yaxis()
     ax.set_xlabel("Separation (arcsec)")
     ax.set_ylabel("Magnitude F444W")
@@ -81,7 +81,8 @@ except json.JSONDecodeError:
     st.error("Error loading JSON file. Please ensure it is correctly formatted.")
 except Exception as e:
     st.error(f"An error occurred: {e}")
-    
+
+##############################################################################################################
 # File uploader for the input object file
 uploaded_file = st.file_uploader("Upload your target star file with the following information: stellar age, distance, stellar mass, and magnitude in a specific filter band.", type=["txt", "csv"], key='up2')
 
@@ -111,6 +112,8 @@ try:
 except:
     print('File not uploaded')
 
+
+##############################################################################################################
 st.title("Generation of Companions")
 st.write("Below we will create random sets of orbital parameters using Poisson statistics and the following priors: uniform priors for the longitude of the ascending node and the longitude of periastron, cosine priors for inclination, and Gaussian priors for eccentricity N~(0, 0.3) (Hogg2010). For each set of orbital parameters, we generate evenly spaced in time and assess detectability across an even grid of companion masses and semimajor axes. Each survey is a realization. The same set of orbital parameters is applied to every target. For low-mass planets, we utilize the BEX evolutionary models (Linder2019), while for higher-mass companions, we use the ATMO 2020 models (Phillips2020).")
 
@@ -134,59 +137,88 @@ p.sigma_bd = 1.21 #SPHERE SHINE survey
 
 st.write("Enter user input parameters, then click run for the simulations. Specify the normalization frequency within a certain separation-mass space. Then specify the limits for which the random companions will be generated.")
 
-#user input
+# user input
+# Planets
 # Number of real planets
 p.n_real = st.slider("Number of Surveys/Realizations", min_value=1, max_value=10000, value=100)
-
 # Normalization bounds for planets
-st.subheader("Normalization Bounds for Planets")
+st.subheader("Normalization Limits for Planets")
 # Planet frequency
-p.P_pl = st.number_input("Planet Frequency",  0.01, None, step=None, format=None, key=None)
-p.an_min_pl = st.slider("Minimum Planet Separation (AU)", min_value=0.001, max_value=1000.0, value=0.01)
-p.an_max_pl = st.slider("Maximum Planet Separation (AU)", min_value=0.001, max_value=1000.0, value=100.0)
-
+p.P_pl = st.slider("Planet Frequency", min_value=0.01, max_value=1.0, value=0.1, step=0.01)
+p.an_min_pl, p.an_max_pl = st.slider(
+    "Planet Separation Range (AU)",
+    min_value=0.001,max_value=1000.0,value=(0.01, 100.0))
 # Minimum and maximum planet mass (in solar masses)
-p.mn_min_pl = st.slider("Minimum Planet Mass ($M_{Jup}$)", min_value=0.001, max_value=200.0, value=1.0)
-p.mn_max_pl = st.slider("Maximum Planet Mass ($M_{Jup}$)", min_value=0.001, max_value=200.0, value=75.0)
+p.mn_min_pl, p.mn_max_pl = st.slider(
+    "Planet Mass Range ($\mathrm{M_{Jup}}$)",
+    min_value=0.001,max_value=200.0,value=(1.0, 75.0))
+
 p.mn_min_pl = p.mn_min_pl*0.0009545942
 p.mn_max_pl = p.mn_max_pl*0.0009545942
 
 # Planet limits
 st.subheader("Simulation Limits for Planets")
-p.a_min_pl = st.slider("Minimum Simulation Semi-Major Axis (AU)", min_value=0, max_value=1000, value=0)
-p.a_max_pl = st.slider("Maximum Simulation Semi-Major Axis (AU)", min_value=0, max_value=1000, value=1000)
+p.a_min_pl, p.a_max_pl = st.slider(
+    "Simulation Semi-Major Axis Range (AU)",
+    min_value=0,max_value=1000,value=(0, 300))
+p.m_min_pl, p.m_max_pl = st.slider(
+    "Simulation Planet Mass Range ($M_{Jup}$)",
+    min_value=0.0009545942,max_value=200.0,value=(1.0, 75.0))
 
-# Change parameters for planets
-p.m_min_pl = st.slider("Minimum Simulation Planet Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=1.0)
-p.m_max_pl = st.slider("Maximum Simulation Planet Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=75.0)
 p.m_min_pl = p.m_min_pl*0.0009545942
 p.m_max_pl = p.m_max_pl*0.0009545942
 
+# Brown Dwarfs
 # BD limits
-st.subheader("Normalization Bounds for Brown Dwarfs")
-p.P_bd = st.number_input("Brown Dwarf Frequency",  0.01, None, step=None, format=None, key=None)
-p.an_min_bd = st.slider("Minimum BD Separation (AU)", min_value=0.0, max_value=10.0, value=0.0)
-p.an_max_bd = st.slider("Maximum BD Separation (AU)", min_value=1.0, max_value=1000.0, value=108.91175375)
-p.mn_min_bd = st.slider("Minimum BD Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=3.0)
-p.mn_max_bd = st.slider("Maximum BD Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=100.0)
+st.subheader("Normalization Limits for Brown Dwarfs")
+p.P_bd = st.slider(
+    "Brown Dwarf Frequency",
+    min_value=0.01,
+    max_value=1.0,
+    value=0.1,
+    step=0.01)
+
+p.an_min_bd, p.an_max_bd = st.slider(
+    "BD Separation Range (AU)",
+    min_value=0.0,
+    max_value=1000.0,
+    value=(0.0, 100.0)
+)
+
+p.mn_min_bd, p.mn_max_bd = st.slider(
+    "BD Mass Range ($M_{Jup}$)",
+    min_value=0.0009545942,
+    max_value=200.0,
+    value=(3.0, 100.0)
+)
+
 p.mn_min_bd *=0.0009545942
 p.mn_max_bd *=0.0009545942
 
 # BD mass limits
 st.subheader("Simulation Limits for Brown Dwarfs")
 # Minimum and maximum brown dwarf mass (in solar masses)
-p.m_min_bd = st.slider("Minimum Simulation BD Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=3.0)
-p.m_max_bd = st.slider("Maximum Simulation BD Mass ($M_{Jup}$)", min_value=0.0009545942, max_value=200.0, value=100.0)
+p.m_min_bd, p.m_max_bd = st.slider(
+    "Simulation BD Mass Range ($\mathrm{M_{Jup}}$)",
+    min_value=0.0009545942,
+    max_value=200.0,
+    value=(3.0, 100.0)
+)
+
 p.m_min_bd*=0.0009545942
 p.m_max_bd*=0.0009545942
 
 # BD semi-major axis limits
-p.a_min_bd = st.slider("Minimum Simulation BD Semi-Major Axis (AU)", min_value=0.0, max_value=100.0, value=0.0)
-p.a_max_bd = st.slider("Maximum Simulation BD Semi-Major Axis (AU)", min_value=0.0, max_value=200.0, value=108.0)
+p.a_min_bd, p.a_max_bd = st.slider(
+    "Simulation BD Semi-Major Axis Range (AU)",
+    min_value=0.0,
+    max_value=200.0,
+    value=(0.0, 108.0)
+)
 
 #Let user choose model assumptions
 st.subheader("Model Assumptions")
-st.write("The mass distributions are assumed to be power-law with index of 1.43 and 0.36 for planets and brown dwarfs, repectively, from Meyer 2024.")
+st.write("The mass distributions are assumed to be power-law with index of -1.43 and 0.36 for planets and brown dwarfs, repectively, from Meyer 2024.")
 pl_type = st.radio("Planet Model:", ("Super-Jupiter (> 1 MJ)", "Sub-Jupiter (< 1 MJ)"))
 
 if pl_type == "Super-Jupiter (> 1 MJ)":
