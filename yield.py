@@ -124,14 +124,20 @@ p = input_pams()
 # Use q-ratio instead of masses for BDs?
 p.q_flag_bd = 1    # 1 == Yes for q-ratio, otherwise m will be in solar masses.
 p.q_flag_pl = 1
+
 #### PLANET PARAMETERS ###
-p.alpha = -1.43
+p.alpha = 1.43
 p.A_pl = np.exp(-5.52)  #1 Normalization Variable
-p.median_loga = 0.57 #SHINE Vigan 2021 #peak of log-normal distribution
-p.sigma = 0.23
+#p.median_loga = 0.57 #SHINE Vigan 2021 #peak of log-normal distribution
+#p.sigma = 0.23
+mu_natural = 1.32   #ln
+sigma_pl_ln = 0.53  #ln
+p.median_loga = mu_natural
+p.sigma = sigma_pl_ln
+
 #### BD PARAMETERS ###
 p.A_bd = np.exp(-3.78)
-p.alpha_bd = 0.36 #was 0.25, depends on
+p.alpha_bd = -0.36 #was 0.25, depends on
 p.median_loga_bd = 1.43   ## Extrapolated from Solar to BD
 p.sigma_bd = 1.21 #SPHERE SHINE survey
 
@@ -233,21 +239,18 @@ d = generate_distributions(p)
 #if p.planet_sma == 'flat':
 #    d.adis = 1 / (d.a * np.log10(p.a_max_pl / p.a_min_pl))  # Restructure sma distribution after normalizing
 
-mu_natural = 1.32   #ln
-sigma_pl_ln = 0.53  #ln
-
 def orbital_dist_subJupiter(a):
     if a <= 10:
-        return 2*(np.exp(-(np.log10(a) - p.median_loga) ** 2/(2 * 2*p.sigma ** 2)))#/(np.sqrt(2*np.pi)*sigma_pl_ln*a)
+        return (np.exp(-(np.log10(a) - p.median_loga) ** 2/(2* p.sigma ** 2)))#/(np.sqrt(2*np.pi)*sigma_pl_ln*a)
     else:
-        return 0.8430271150978883
+        return 0.19#0.8430271150978883
         
 if p.planet_sma == 'flat':
     a_min = p.a_min_pl
     a_max = p.a_max_pl
 
     if a_min<=10 and a_max <=10:
-        a_values_m = np.linspace(a_min,a_max, 1000)#/(np.sqrt(2*np.pi)*2*p.sigma*a)
+        a_values_m = np.linspace(a_min, a_max, 1000)#/(np.sqrt(2*np.pi)*2*p.sigma*a)
         adis =  [orbital_dist_subJupiter(a) for a in a_values_m]
     elif a_min<=10 and a_max>10:
         a_values_m1 = np.linspace(a_min,10, 500)#/(np.sqrt(2*np.pi)*2*p.sigma*a)
@@ -301,7 +304,6 @@ if st.button('Run'):
     loop_timer = timeit.default_timer()
 
     # Open output file
-
     p.ninst = 1
     Fout = open('PL_out.dat', 'w')  # Open file
     Fout1 = open('BD_out.dat', 'w')  # Open file
@@ -321,7 +323,7 @@ if st.button('Run'):
         ## Choose mass- or mass-ratio distribution
         if p.q_flag_bd == 1:
             d.q = (d.m/star_mass[ii])
-            qdis_bd = (d.q)**p.alpha_bd
+            qdis_bd = (d.q)**-p.alpha_bd
             i = np.where( (d.q>= p.mn_min_bd) & (d.q<= p.mn_max_bd))[0]
             intm = integrate.simps(qdis_bd[i],np.log10(d.q[i]))
         else:
@@ -329,7 +331,7 @@ if st.button('Run'):
             intm = integrate.simps(mdis_bd[i], np.log10(d.m[i]))
         j = np.where( (d.a>= p.an_min_bd) & (d.a<= p.an_max_bd))[0]
         inta = integrate.simps(d.adis_bd[j], np.log10(d.a[j]))
-        k_bd = 1/p.A_bd#p.P_bd/(intm*inta)
+        k_bd = p.P_bd/(intm*inta)
         # Can't have companion mass greater than stellar mass
         if p.m_max_bd > star_mass[ii]:
             tmp_m_max_bd = star_mass[ii]
@@ -346,19 +348,33 @@ if st.button('Run'):
         ## Planet probability
         #####
         if p.planet_sma == 'flat':
-            adis_pl = d.adis
+            adis_pl = adis_flat
         else:
             adis_pl = d.adis
 
         if p.q_flag_pl == 1:
-            qdis_pl = d.mdis_ref.val * star_mass[ii]**-p.alpha
+            d.q = d.mdis_ref.val/star_mass[ii]
+            qdis_pl = (d.mdis_ref.val/star_mass[ii])**-p.alpha
+            i = np.where( (d.q>= p.mn_min_pl) & (d.q<= p.mn_max_pl))[0]
+            intm = integrate.simps(qdis_pl[i],np.log10(d.q[i]))
+        else:
+            i = np.where( (d.m>= p.mn_min_pl) & (d.m<= p.mn_max_pl))[0]
+            intm = integrate.simps(mdis[i], np.log10(d.m[i]))
+        j = np.where( (d.a>= p.an_min_pl) & (d.a<= p.an_max_pl))[0]
+        inta = integrate.simps(adis_pl[j], np.log10(d.a[j]))
+        k_pl = p.P_pl/(intm*inta)
+        
+        if p.q_flag_pl == 1:
+            qdis_pl = (d.mdis_ref.val/star_mass[ii])**-p.alpha
+#            d.k_pl = 1/p.A_pl
             if p.planet_sma == 'lognormal':
                 Ppl = prob_mean(d.q, qdis_pl, d.a, adis_pl, p.m_min_pl/star_mass[ii], p.m_max_pl/star_mass[ii],
-                p.a_min_pl, p.a_max_pl, d.k_pl*10, p)         # Removed p.m_max_pl and now going for 0.1*star_mass[ii] of star mass
+                p.a_min_pl, p.a_max_pl, k_pl, p)         # Removed p.m_max_pl and now going for 0.1*star_mass[ii] of star mass
             if p.planet_sma == 'flat':
                 Ppl = prob_mean(d.q, qdis_pl, d.a, adis_pl, p.m_min_pl/star_mass[ii], p.m_max_pl/star_mass[ii],
-                p.a_min_pl, p.a_max_pl, d.k_pl*10, p)        # Removed p.m_max_pl and now going for 0.1*star_mass[ii] of star mass
+                p.a_min_pl, p.a_max_pl, k_pl, p)        # Removed p.m_max_pl and now going for 0.1*star_mass[ii] of star mass
                 #print(Ppl.P_mean) #planet frequency
+                
         #####
         ## Importing contrast curves and evolutionary models
         #####
@@ -510,8 +526,6 @@ if st.button('Run'):
                     (mag_bd, log_mass[k], log_q[k], log_a[k], sep_au, sep_as,
                     incl[k], ecc[k], numbout, ii, jj))
                     
-
-            
             # Outside k but inside jj
             if bd_detection[jj] >= 1:
                 bd_detection_prob[ii]+=1
@@ -521,7 +535,6 @@ if st.button('Run'):
             
     Fout.close()
     Fout1.close()
-
 ##
 
 #    #######################
@@ -553,7 +566,6 @@ st.write("Overall # of BDs: %1.3f" % float(sum(bd_detected_fraction) / n_real))
 st.write(" = = = = = = = = = = = = = = = = = = = =")
 st.write("Planet null-detection probability: %1.3f" % float(null_pl))
 st.write("BD null-detection probability: %1.3f" % float(null_bd))
-
 
 n = p.n_real
 n_real = p.n_real
@@ -599,7 +611,6 @@ try:
     mag_bd = dat_bd['mag_pl']
 
     # Planets
-
     gen_pl = np.append(np.where(flag_pl == 0)[0], np.where(flag_pl == 1)[0])
     gen_pl = np.append(gen_pl, np.where(flag_pl == 6)[0])
     gen_pl = np.append(gen_pl, np.where(flag_pl == 7)[0])
@@ -632,21 +643,21 @@ try:
 
     #Plotting planets
 
-    source_generated = ColumnDataSource(data={'separation': la_as_pl[gen_pl], 'magnitude': mag_pl[gen_pl]})
-    source_detected = ColumnDataSource(data={'separation': la_as_pl[det_pl], 'magnitude': mag_pl[det_pl]})
+    source_generated = ColumnDataSource(data={'separation': 10**la_pl[gen_pl], 'magnitude': mag_pl[gen_pl]})
+    source_detected = ColumnDataSource(data={'separation': 10**la_pl[det_pl], 'magnitude': mag_pl[det_pl]})
 
     # Initialize the Bokeh figure
     p = figure(title="Planets - "+pl_type,
-               x_axis_label="Separation (arcseconds)", y_axis_label="Apparent Magnitude",
-               x_axis_type="log", y_range=(27, 0), width=800, height=400)
+               x_axis_label="Separation (AU)", y_axis_label="Apparent Magnitude",
+               x_axis_type="log", y_range=(27, 0), width=600, height=400)
 
     # Plot generated and detected planets
     p.circle('separation', 'magnitude', source=source_generated, color="black", size=7, alpha=0.2, legend_label=f"# Generated: {len(gen_pl)}")
-    p.circle('separation', 'magnitude', source=source_detected, color="red", size=7, alpha=0.2, legend_label=f"# Detected: {len(det_pl)}")
+    p.circle('separation', 'magnitude', source=source_detected, color="red", size=7, alpha=0.7, legend_label=f"# Detected: {len(det_pl)}")
 
     # Plot contrast curves from contr_sep_arr and contr_mag_arr
     for i in range(len(contr_sep_arr)):
-        source_contrast = ColumnDataSource(data={'separation': contr_sep_arr[i], 'magnitude': contr_mag_arr[i]})
+        source_contrast = ColumnDataSource(data={'separation': contr_sep_arr[i]*dist[i], 'magnitude': contr_mag_arr[i]})
         p.line('separation', 'magnitude', source=source_contrast, color="grey", line_width=1.5, alpha=0.6)
 
     # Customize appearance
@@ -657,24 +668,52 @@ try:
 
     # Display the plot in Streamlit
     st.bokeh_chart(p)
+    
+    #mass-magnitude space
+    source_generated = ColumnDataSource(data={'separation': 10**la_pl[gen_pl], 'mass': 10**lm_pl[gen_pl]/0.001})
+    source_detected = ColumnDataSource(data={'separation': 10**la_pl[det_pl], 'mass': 10**lm_pl[det_pl]/0.001})
+
+    # Initialize the Bokeh figure
+    p = figure(title="Planets - "+pl_type,
+               x_axis_label="Separation (AU)", y_axis_label="Mass (MJ)",
+               x_axis_type="log", y_range=(0, 20), width=600, height=400)
+
+    # Plot generated and detected planets
+    p.circle('separation', 'mass', source=source_generated, color="black", size=7, alpha=0.2, legend_label=f"# Generated: {len(gen_pl)}")
+    p.circle('separation', 'mass', source=source_detected, color="red", size=7, alpha=0.7, legend_label=f"# Detected: {len(det_pl)}")
+
+#    # Plot contrast curves from contr_sep_arr and contr_mag_arr
+#    for i in range(len(contr_sep_arr)):
+#        source_contrast = ColumnDataSource(data={'separation': contr_sep_arr[i]*dist[i], 'magnitude': contr_mag_arr[i]})
+#        p.line('separation', 'magnitude', source=source_contrast, color="grey", line_width=1.5, alpha=0.6)
+
+    # Customize appearance
+    p.legend.title = "Legend"
+    p.legend.location = "top_right"
+    p.xaxis.axis_label_text_font_size = "12pt"
+    p.yaxis.axis_label_text_font_size = "12pt"
+
+    # Display the plot in Streamlit
+    st.bokeh_chart(p)
+    
 
     #Plotting BDs
 
-    source_generated = ColumnDataSource(data={'separation': la_as_bd[gen_bd], 'magnitude': mag_bd[gen_bd]})
-    source_detected = ColumnDataSource(data={'separation': la_as_bd[det_bd], 'magnitude': mag_bd[det_bd]})
+    source_generated = ColumnDataSource(data={'separation': 10**la_bd[gen_bd], 'magnitude': mag_bd[gen_bd]})
+    source_detected = ColumnDataSource(data={'separation': 10**la_bd[det_bd], 'magnitude': mag_bd[det_bd]})
 
     # Initialize the Bokeh figure
     p = figure(title="Brown Dwarfs",
-               x_axis_label="Separation (arcseconds)", y_axis_label="Apparent Magnitude",
-               x_axis_type="log", y_range=(27, 0), width=800, height=400)
+               x_axis_label="Separation (AU)", y_axis_label="Apparent Magnitude",
+               x_axis_type="log", y_range=(27, 0), width=600, height=400)
 
     # Plot generated and detected planets
     p.circle('separation', 'magnitude', source=source_generated, color="black", size=7, alpha=0.2, legend_label=f"# Generated: {len(gen_bd)}")
-    p.circle('separation', 'magnitude', source=source_detected, color="red", size=7, alpha=0.2, legend_label=f"# Detected: {len(det_bd)}")
+    p.circle('separation', 'magnitude', source=source_detected, color="blue", size=7, alpha=0.7, legend_label=f"# Detected: {len(det_bd)}")
 
     # Plot contrast curves from contr_sep_arr and contr_mag_arr
     for i in range(len(contr_sep_arr)):
-        source_contrast = ColumnDataSource(data={'separation': contr_sep_arr[i], 'magnitude': contr_mag_arr[i]})
+        source_contrast = ColumnDataSource(data={'separation': contr_sep_arr[i]*dist[i], 'magnitude': contr_mag_arr[i]})
         p.line('separation', 'magnitude', source=source_contrast, color="grey", line_width=1.5, alpha=0.6)
 
     # Customize appearance
@@ -685,14 +724,41 @@ try:
 
     # Display the plot in Streamlit
     st.bokeh_chart(p)
+    
+    #Plotting BDs
 
+    source_generated = ColumnDataSource(data={'separation': 10**la_bd[gen_bd], 'mass': 10**lm_bd[gen_bd]/0.001})
+    source_detected = ColumnDataSource(data={'separation': 10**la_bd[det_bd], 'mass': 10**lm_bd[det_bd]/0.001})
+
+    # Initialize the Bokeh figure
+    p = figure(title="Brown Dwarfs",
+               x_axis_label="Separation (AU)", y_axis_label="Mass (MJ)",
+               x_axis_type="log", y_range=(0, 100), width=600, height=400)
+
+    # Plot generated and detected planets
+    p.circle('separation', 'mass', source=source_generated, color="black", size=7, alpha=0.2, legend_label=f"# Generated: {len(gen_bd)}")
+    p.circle('separation', 'mass', source=source_detected, color="blue", size=7, alpha=0.7, legend_label=f"# Detected: {len(det_bd)}")
+
+#    # Plot contrast curves from contr_sep_arr and contr_mag_arr
+#    for i in range(len(contr_sep_arr)):
+#        source_contrast = ColumnDataSource(data={'separation': contr_sep_arr[i]*dist[i], 'magnitude': contr_mag_arr[i]})
+#        p.line('separation', 'magnitude', source=source_contrast, color="grey", line_width=1.5, alpha=0.6)
+
+    # Customize appearance
+    p.legend.title = "Legend"
+    p.legend.location = "top_right"
+    p.xaxis.axis_label_text_font_size = "12pt"
+    p.yaxis.axis_label_text_font_size = "12pt"
+
+    # Display the plot in Streamlit
+    st.bokeh_chart(p)
 
     # Set up your Streamlit application
     st.subheader("Detection Probability Distribution")
     jj_pl = np.random.randint(0, n_real, size=n_real)  # Example data
     jj_bd = np.random.randint(0, n_real, size=n_real)  # Example data
-    flag_pl = np.random.randint(0, 8, size=n_real)     # Example data
-    flag_bd = np.random.randint(0, 10, size=n_real)    # Example data
+    flag_pl = np.random.randint(0, len(objnam), size=n_real)     # Example data
+    flag_bd = np.random.randint(0, len(objnam), size=n_real)    # Example data
 
     # Initialize arrays for detected and undetected planets
     w_pl = []      # detected planets
@@ -726,19 +792,36 @@ try:
     pp = np.array(w_pl) + np.array(w_bd)
 
     # Detection Probability Distribution
-    bb = np.arange(31) - 0.5
+    bb = np.arange(len(objnam)) - 0.5
     hh1 = np.histogram(pp, bins=bb, density=True)
 
-    # Create the first plot
+    # Create a Bokeh figure
+    p = figure(title="Detected Planets and BDs", plot_width=600, plot_height=400)
 
-    fig1, ax1 = plt.subplots()
-    ax1.hist(w_pl, bins=hh1[1], density=True, color='g', alpha=.3, label='Detected Planets')
-    ax1.hist(w_bd, bins=bb, density=True, color='red', alpha=.3, label='Detected BDs')
-    ax1.plot(hh1[0], '.-', label='Histogram')
-    ax1.set_ylabel('PDF', fontsize=18)
-    ax1.set_xlabel('# Detections', fontsize=18)
-    ax1.set_xlim([-0.5, 5])
-    ax1.legend()
-    st.pyplot(fig1)
+    # Histogram for planets
+    hist_pl, edges_pl = np.histogram(w_pl, bins=hh1[1], density=True)
+    p.quad(top=hist_pl, bottom=0, left=edges_pl[:-1], right=edges_pl[1:],
+           fill_color="green", fill_alpha=0.3, line_color="green", legend_label="Detected Planets")
+
+    # Histogram for brown dwarfs
+    hist_bd, edges_bd = np.histogram(w_bd, bins=bb, density=True)
+    p.quad(top=hist_bd, bottom=0, left=edges_bd[:-1], right=edges_bd[1:],
+           fill_color="red", fill_alpha=0.3, line_color="red", legend_label="Detected BDs")
+
+    # Add line plot for histogram data
+    x_hist = (hh1[1][1:] + hh1[1][:-1]) / 2  # Bin centers
+    p.line(x_hist, hh1[0], line_color="blue", line_width=2, legend_label="Histogram")
+
+    # Customize the plot
+    p.xaxis.axis_label = "# Detections"
+    p.yaxis.axis_label = "PDF"
+    p.x_range.start = -0.5
+    p.x_range.end = 5
+    p.legend.title = "Legend"
+    p.legend.label_text_font_size = "12pt"
+    p.legend.title_text_font_size = "14pt"
+
+    # Display the plot in Streamlit
+    st.bokeh_chart(p)
 except:
     pass
