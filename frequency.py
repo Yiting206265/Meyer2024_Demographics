@@ -182,8 +182,8 @@ f_pl = A_pl*np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a 
        np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
 
 # Display results in Streamlit
-st.write(f"Mean Number of Companions Per Star:", f_pl+f_bd)
-
+st.write(f"Mean Number of Planets Per Star:", f_pl)
+st.write(f"Mean Number of Brown Dwarfs Per Star:", f_bd)
 
 ########################################################################################
 ##################################################################################################
@@ -250,23 +250,18 @@ mass_ratio_values = np.linspace(Jup_min * q_Jupiter, Jup_max * q_Jupiter, 500)
 if a_min<=10 and a_max <=10:
     a_values_m = np.linspace(a_min,a_max, 500)
     f_subJ =  A_pl*np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a in a_values_m], a_values_m) * \
-       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values) + A_bd*np.trapz([orbital_dist_bd(a)/(np.sqrt(2 * np.pi)*s_m*a) for a in a_values_m], a_values_m) * \
-       np.trapz([d_q_i ** -alpha_bd for d_q_i in mass_ratio_values], mass_ratio_values)
+       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)+ A_bd*np.trapz([orbital_dist_bd(a)/(np.sqrt(2 * np.pi)*s_m*a) for a in a_values_m], a_values_m)
 elif a_min<=10 and a_max>10:
     a_values_m1 = np.linspace(a_min,10, 500)
-    f_subJ1 = A_pl*np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a in a_values_m], a_values_m) * \
-       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values) + A_bd*np.trapz([orbital_dist_bd(a)/(np.sqrt(2 * np.pi)*s_m*a) for a in a_values_m], a_values_m) * \
-       np.trapz([d_q_i ** -alpha_bd for d_q_i in mass_ratio_values], mass_ratio_values)
+    f_subJ1 = A_pl* np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a in a_values_m], a_values_m) * np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
     a_values_m2 = np.linspace(10,a_max, 500)
     f_subJ2 = A_pl* np.trapz([0.19/(a*np.log(a_max/10)) for a in a_values_m2], a_values_m2) * \
-       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values) +A_bd* np.trapz([0.19/(a*np.log(a_max/10)) for a in a_values_m2], a_values_m2) * \
-       np.trapz([d_q_i ** -alpha_bd for d_q_i in mass_ratio_values], mass_ratio_values)
+       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
     f_subJ = f_subJ1 + f_subJ2
 elif a_min>10 and a_max >10:
     a_values_m = np.linspace(a_min,a_max, 500)
     f_subJ = A_pl* np.trapz([0.19/(a*np.log(a_max/10)) for a in a_values_m], a_values_m) * \
-       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values) + A_bd* np.trapz([0.19/(a*np.log(a_max/10)) for a in a_values_m], a_values_m) * \
-       np.trapz([d_q_i ** -alpha_bd for d_q_i in mass_ratio_values], mass_ratio_values)
+       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
        
 # Display results in Streamlit
 st.write(f"Mean Number of Companions Per Star:", f_subJ)

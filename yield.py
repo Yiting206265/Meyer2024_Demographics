@@ -35,6 +35,35 @@ if uploaded_file is None:
 else:
     f = uploaded_file
 
+def get_interpolated_mass(input_luminosity, input_age):
+    # Function to get interpolated mass based on given luminosity and age
+
+    # Extract relevant data from the existing model
+    # Example model data (replace this with your actual model data)
+    mod_ages = [0.001,0.002,0.003,0.004,0.005,0.006,0.007,0.008,0.009,
+                0.010,0.020,0.030,0.040,0.050,0.060,0.070,0.080,0.090,0.100,
+                0.120,0.150,0.200,0.300,0.400,0.500,0.600,0.700,0.800,0.900,
+                1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,12.0]
+
+    model_age = find_nearest(mod_ages, input_age)
+    modat = np.genfromtxt('./BT_settl_models.dat', usecols=[0,1,2,3,8,9,10,11,12,13])
+    mok = np.where(modat[:,0] == model_age)[0]
+    model_mass = modat[mok,1]
+    model_luminosity = modat[mok,3]
+
+    # Perform linear interpolation/extrapolation based on luminosity and age
+
+    # Check if the given input luminosity is within the range of model luminosities
+    if input_luminosity < min(model_luminosity) or input_luminosity > max(model_luminosity):
+        # Perform extrapolation if input luminosity is outside the model range
+        # Here, a simple linear extrapolation is used (replace with your preferred method)
+        interpolated_mass = np.interp(input_luminosity, model_luminosity, model_mass)
+    else:
+        # Perform interpolation within the model data range
+        interpolated_mass = np.interp(input_luminosity, model_luminosity, model_mass)
+
+    return interpolated_mass
+    
 try:
     calcons_json = json.load(f)
 
@@ -57,6 +86,7 @@ try:
     for name in names:
         seps_arcsec = calcons_json[name]['F444W']['seps_arcsec']
         sensitivity_mag = calcons_json[name]['F444W']['5sig_maskmag']
+        
         ax.plot(seps_arcsec, sensitivity_mag, label=name)
         sep.append(seps_arcsec)
         mag_sens.append(sensitivity_mag)
@@ -153,11 +183,11 @@ st.subheader("Normalization Limits for Planets")
 p.P_pl = st.slider("Planet Frequency", min_value=0.01, max_value=1.0, value=0.1, step=0.01)
 p.an_min_pl, p.an_max_pl = st.slider(
     "Planet Separation Range (AU)",
-    min_value=0.001,max_value=1000.0,value=(0.01, 100.0))
+    min_value=0.1,max_value=1000.0,value=(0.01, 100.0))
 # Minimum and maximum planet mass (in solar masses)
 p.mn_min_pl, p.mn_max_pl = st.slider(
     "Planet Mass Range ($\mathrm{M_{Jup}}$)",
-    min_value=0.001,max_value=200.0,value=(1.0, 75.0))
+    min_value=0.1,max_value=200.0,value=(1.0, 75.0))
 
 p.mn_min_pl = p.mn_min_pl*0.0009545942
 p.mn_max_pl = p.mn_max_pl*0.0009545942
@@ -166,10 +196,10 @@ p.mn_max_pl = p.mn_max_pl*0.0009545942
 st.subheader("Simulation Limits for Planets")
 p.a_min_pl, p.a_max_pl = st.slider(
     "Simulation Semi-Major Axis Range (AU)",
-    min_value=0,max_value=1000,value=(0, 300))
+    min_value=0.1,max_value=1000.0,value=(0.1, 300.0))
 p.m_min_pl, p.m_max_pl = st.slider(
     "Simulation Planet Mass Range ($M_{Jup}$)",
-    min_value=0.0009545942,max_value=200.0,value=(1.0, 75.0))
+    min_value=0.1,max_value=200.0,value=(0.1, 75.0))
 
 p.m_min_pl = p.m_min_pl*0.0009545942
 p.m_max_pl = p.m_max_pl*0.0009545942
@@ -186,14 +216,14 @@ p.P_bd = st.slider(
 
 p.an_min_bd, p.an_max_bd = st.slider(
     "BD Separation Range (AU)",
-    min_value=0.0,
+    min_value=0.1,
     max_value=1000.0,
     value=(0.0, 100.0)
 )
 
 p.mn_min_bd, p.mn_max_bd = st.slider(
     "BD Mass Range ($M_{Jup}$)",
-    min_value=0.0009545942,
+    min_value=0.1,
     max_value=200.0,
     value=(3.0, 100.0)
 )
@@ -206,7 +236,7 @@ st.subheader("Simulation Limits for Brown Dwarfs")
 # Minimum and maximum brown dwarf mass (in solar masses)
 p.m_min_bd, p.m_max_bd = st.slider(
     "Simulation BD Mass Range ($\mathrm{M_{Jup}}$)",
-    min_value=0.0009545942,
+    min_value=0.1,
     max_value=200.0,
     value=(3.0, 100.0)
 )
@@ -217,7 +247,7 @@ p.m_max_bd*=0.0009545942
 # BD semi-major axis limits
 p.a_min_bd, p.a_max_bd = st.slider(
     "Simulation BD Semi-Major Axis Range (AU)",
-    min_value=0.0,
+    min_value=0.1,
     max_value=200.0,
     value=(0.0, 108.0)
 )
@@ -243,7 +273,7 @@ def orbital_dist_subJupiter(a):
     if a <= 10:
         return (np.exp(-(np.log10(a) - p.median_loga) ** 2/(2* p.sigma ** 2)))#/(np.sqrt(2*np.pi)*sigma_pl_ln*a)
     else:
-        return 0.19#0.8430271150978883
+        return 0.84#
         
 if p.planet_sma == 'flat':
     a_min = p.a_min_pl
@@ -251,16 +281,16 @@ if p.planet_sma == 'flat':
 
     if a_min<=10 and a_max <=10:
         a_values_m = np.linspace(a_min, a_max, 1000)#/(np.sqrt(2*np.pi)*2*p.sigma*a)
-        adis =  [orbital_dist_subJupiter(a) for a in a_values_m]
+        adis =  [orbital_dist_subJupiter(a)/(np.sqrt(2*np.pi)*2*p.sigma*a) for a in a_values_m]
     elif a_min<=10 and a_max>10:
         a_values_m1 = np.linspace(a_min,10, 500)#/(np.sqrt(2*np.pi)*2*p.sigma*a)
-        f_subJ1 =  [orbital_dist_subJupiter(a) for a in a_values_m1]
+        f_subJ1 =  [orbital_dist_subJupiter(a)/(np.sqrt(2*np.pi)*2*p.sigma*a) for a in a_values_m1]
         a_values_m2 = np.linspace(10,a_max, 500)
-        f_subJ2 = [1.13/(a*np.log(a_max/10)) for a in a_values_m2]
+        f_subJ2 = [0.84/(a*np.log(a_max/10)) for a in a_values_m2]
         adis = list(f_subJ1) + list(f_subJ2)
     elif a_min>10 and a_max >10:
         a_values_m = np.linspace(a_min,a_max, 1000)
-        adis = [1.13/(a*np.log(a_max/a_min)) for a in a_values_m]
+        adis = [0.84/(a*np.log(a_max/a_min)) for a in a_values_m]
         
     adis_flat = np.array(adis)
 
@@ -670,8 +700,8 @@ try:
     st.bokeh_chart(p)
     
     #mass-magnitude space
-    source_generated = ColumnDataSource(data={'separation': 10**la_pl[gen_pl], 'mass': 10**lm_pl[gen_pl]/0.001})
-    source_detected = ColumnDataSource(data={'separation': 10**la_pl[det_pl], 'mass': 10**lm_pl[det_pl]/0.001})
+    source_generated = ColumnDataSource(data={'separation': 10**la_pl[gen_pl], 'mass': 10**lm_pl[gen_pl]/0.0009545942})
+    source_detected = ColumnDataSource(data={'separation': 10**la_pl[det_pl], 'mass': 10**lm_pl[det_pl]/0.0009545942})
 
     # Initialize the Bokeh figure
     p = figure(title="Planets - "+pl_type,
@@ -687,6 +717,16 @@ try:
 #        source_contrast = ColumnDataSource(data={'separation': contr_sep_arr[i]*dist[i], 'magnitude': contr_mag_arr[i]})
 #        p.line('separation', 'magnitude', source=source_contrast, color="grey", line_width=1.5, alpha=0.6)
 
+#    for name in range(names):
+#        seps_arcsec = calcons_json[names[name]]['F444W']['seps_arcsec']
+#        sensitivity_mag = calcons_json[names[name]]['F444W']['5sig_maskmag']
+#        
+#        lum = []
+#        for i in np.array(sensitivity_mag):
+#            lum.append((get_interpolated_mass(np.log10(184*10**(-0.4*i)*4*np.pi*dist[name]**2), age[name])))
+#        
+#        plt.plot(seps_arcsec, sensitivity, label=name)
+#        
     # Customize appearance
     p.legend.title = "Legend"
     p.legend.location = "top_right"
@@ -727,8 +767,8 @@ try:
     
     #Plotting BDs
 
-    source_generated = ColumnDataSource(data={'separation': 10**la_bd[gen_bd], 'mass': 10**lm_bd[gen_bd]/0.001})
-    source_detected = ColumnDataSource(data={'separation': 10**la_bd[det_bd], 'mass': 10**lm_bd[det_bd]/0.001})
+    source_generated = ColumnDataSource(data={'separation': 10**la_bd[gen_bd], 'mass': 10**lm_bd[gen_bd]/0.0009545942})
+    source_detected = ColumnDataSource(data={'separation': 10**la_bd[det_bd], 'mass': 10**lm_bd[det_bd]/0.0009545942})
 
     # Initialize the Bokeh figure
     p = figure(title="Brown Dwarfs",
