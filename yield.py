@@ -142,7 +142,6 @@ try:
 except:
     print('File not uploaded')
 
-
 ##############################################################################################################
 st.title("Generation of Companions")
 st.write("Below we will create random sets of orbital parameters using Poisson statistics and the following priors: uniform priors for the longitude of the ascending node and the longitude of periastron, cosine priors for inclination, and Gaussian priors for eccentricity N~(0, 0.3) (Hogg2010). For each set of orbital parameters, we generate evenly spaced in time and assess detectability across an even grid of companion masses and semimajor axes. Each survey is a realization. The same set of orbital parameters is applied to every target. For low-mass planets, we utilize the BEX evolutionary models (Linder2019), while for higher-mass companions, we use the ATMO 2020 models (Phillips2020).")

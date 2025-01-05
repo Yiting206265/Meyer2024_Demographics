@@ -57,7 +57,7 @@ if "force_refresh" not in st.session_state:
 
 # Brown Dwarf parameters in col1
 with col1:
-    alpha_gp = st.slider(r'$\mathrm{\alpha_{pl}}$', min_value=0.0, max_value=3.0, value=1.43, step=0.01)
+    alpha_bd = st.slider(r'$\mathrm{\alpha_{bd}}$', min_value=-2.0, max_value=2.0, value=-0.36, step=0.01)
     A_bd_ln = st.slider(r'$\mathrm{ln(A_{bd})}$', min_value=-10.0, max_value=0.0, value=-3.78, step=0.01)
     mean_bd = st.slider(
         r'$\mathrm{log_{10}(\mu_{bd})}$',
@@ -78,7 +78,7 @@ with col1:
 
 # Giant Planet parameters in col2
 with col2:
-    alpha_bd = st.slider(r'$\mathrm{\alpha_{bd}}$', min_value=-2.0, max_value=2.0, value=-0.36, step=0.01)
+    alpha_gp = st.slider(r'$\mathrm{\alpha_{pl}}$', min_value=0.0, max_value=3.0, value=1.43, step=0.01)
     A_pl_ln = st.slider(r'$\mathrm{ln(A_{pl})}$', min_value=-10.0, max_value=0.0, value=-5.52, step=0.01)
     mu_pl = st.slider(
         r'$\mathrm{log_{10}(\mu_{pl})}$',
