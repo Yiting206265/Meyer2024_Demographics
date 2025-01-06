@@ -153,47 +153,47 @@ def loglike(cube, ndim, nparams):
 # Streamlit UI
 st.title("MultiNest Runner")
 st.write("Press the **Run** button to execute the MultiNest algorithm.")
-
-# Run button
-if st.button("Run MultiNest"):
-    # Initialize variables and setup
-    datafile = './multinest_result/'
-    parameters = ["alpha", "freq", "loga", "sigmaa"]
-    n_params = len(parameters)
-    iterations = 10
-    json.dump(parameters, open(datafile + '_params.json', 'w'))
-
-    # Record start time
-    now = datetime.now()
-
-    # Run MultiNest
-    with st.spinner('Running MultiNest...'):
-        pymultinest.run(
-            loglike, prior, n_params,
-            importance_nested_sampling=True,
-            resume=False,
-            verbose=True,
-            sampling_efficiency='model',
-            max_iter=iterations,
-            n_live_points=10,
-            outputfiles_basename=datafile + '_'
-        )
-
-    # Retrieve and display outputs
-    aa = pymultinest.Analyzer(outputfiles_basename=datafile + '_', n_params=n_params)
-    #a_lnZ = aa.get_stats()['global evidence']
-    bestfit = aa.get_best_fit()
-    bestfit_parameters = np.array(bestfit['parameters'])
-    bestfit_loglike = bestfit['log_likelihood']
-    now1 = datetime.now()
-    time_to_run = now1 - now
-
-    # Display results
-    st.success("MultiNest run completed!")
-    st.write("Best-fit parameters:")
-    # Display each parameter with its best-fit value
-    for param, value in zip(parameters, bestfit_parameters):
-        st.write(f"{param}: {value:.3f}")
-    st.write(f"Best-fit log-likelihood: {bestfit_loglike:.3f}")
-    #st.write(f"Log Evidence (Z): {a_lnZ:.3f}")
-    st.write(f"Time to run code: {time_to_run}")
+#
+## Run button
+#if st.button("Run MultiNest"):
+#    # Initialize variables and setup
+#    datafile = './multinest_result/'
+#    parameters = ["alpha", "freq", "loga", "sigmaa"]
+#    n_params = len(parameters)
+#    iterations = 10
+#    json.dump(parameters, open(datafile + '_params.json', 'w'))
+#
+#    # Record start time
+#    now = datetime.now()
+#
+#    # Run MultiNest
+#    with st.spinner('Running MultiNest...'):
+#        pymultinest.run(
+#            loglike, prior, n_params,
+#            importance_nested_sampling=True,
+#            resume=False,
+#            verbose=True,
+#            sampling_efficiency='model',
+#            max_iter=iterations,
+#            n_live_points=10,
+#            outputfiles_basename=datafile + '_'
+#        )
+#
+#    # Retrieve and display outputs
+#    aa = pymultinest.Analyzer(outputfiles_basename=datafile + '_', n_params=n_params)
+#    #a_lnZ = aa.get_stats()['global evidence']
+#    bestfit = aa.get_best_fit()
+#    bestfit_parameters = np.array(bestfit['parameters'])
+#    bestfit_loglike = bestfit['log_likelihood']
+#    now1 = datetime.now()
+#    time_to_run = now1 - now
+#
+#    # Display results
+#    st.success("MultiNest run completed!")
+#    st.write("Best-fit parameters:")
+#    # Display each parameter with its best-fit value
+#    for param, value in zip(parameters, bestfit_parameters):
+#        st.write(f"{param}: {value:.3f}")
+#    st.write(f"Best-fit log-likelihood: {bestfit_loglike:.3f}")
+#    #st.write(f"Log Evidence (Z): {a_lnZ:.3f}")
+#    st.write(f"Time to run code: {time_to_run}")
