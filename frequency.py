@@ -84,14 +84,14 @@ with col2:
         r'$\mathrm{log_{10}(\mu_{pl})}$',
         min_value=0.0,
         max_value=3.0,
-        value=1.43,  # Default or static value
+        value=mu_pl_value,
         step=0.01
     )
     sigma_pl = st.slider(
         r'$\mathrm{log_{10}(\sigma_{pl})}$',
         min_value=0.0,
         max_value=3.0,
-        value=1.21,  # Default or static value
+        value=sigma_pl_value,  # Default or static value
         step=0.01
     )
 

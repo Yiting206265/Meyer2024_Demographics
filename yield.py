@@ -1,5 +1,7 @@
 ## Import modules
 import numpy as np
+import random
+from scipy import integrate
 import matplotlib.pyplot as plt
 import matplotlib.ticker
 from scipy import interpolate, stats, integrate
@@ -25,7 +27,11 @@ if not hasattr(scipy.integrate, 'simps'):
 # Set the title of the app
 st.title("Yield Prediction")
 
-##############################################################################################################
+####################################################################################
+# Section 1 - Contrast curves
+####################################################################################
+
+st.header("Contrast Curves")
 # File uploader for JSON file
 uploaded_file = st.file_uploader("Upload your JSON file. It should contain a big dictionary where the first-level keys are target names, the second-level keys are filter bands, and the third-level keys are pairs of 5-sigma contrast (named '5sig_maskmag') and separation values (named 'seps_arcsec'). An example can be found below:", type="json", key='up1')
 
@@ -112,9 +118,13 @@ except json.JSONDecodeError:
 except Exception as e:
     st.error(f"An error occurred: {e}")
 
-##############################################################################################################
+####################################################################################
+# Section 2 - Target file
+####################################################################################
+
 # File uploader for the input object file
-uploaded_file = st.file_uploader("Upload your target star file with the following information: stellar age, distance, stellar mass, and magnitude in a specific filter band.", type=["txt", "csv"], key='up2')
+st.header("Target Information")
+uploaded_file = st.file_uploader("Upload your target stars file with the following information: stellar age, distance, stellar mass, and magnitude in a specific filter band.", type=["txt", "csv"], key='up2')
 
 if uploaded_file is None:
     file = open('./files/mdwarfs_w1w2.txt')
@@ -142,33 +152,102 @@ try:
 except:
     print('File not uploaded')
 
-##############################################################################################################
-st.title("Generation of Companions")
-st.write("Below we will create random sets of orbital parameters using Poisson statistics and the following priors: uniform priors for the longitude of the ascending node and the longitude of periastron, cosine priors for inclination, and Gaussian priors for eccentricity N~(0, 0.3) (Hogg2010). For each set of orbital parameters, we generate evenly spaced in time and assess detectability across an even grid of companion masses and semimajor axes. Each survey is a realization. The same set of orbital parameters is applied to every target. For low-mass planets, we utilize the BEX evolutionary models (Linder2019), while for higher-mass companions, we use the ATMO 2020 models (Phillips2020).")
+####################################################################################
+# Section 3 - Generation of Companions
+####################################################################################
+
+st.header("Generation of Companions")
+st.write("Below we will create random sets of orbital parameters using Poisson statistics and the following priors: uniform priors for the longitude of the ascending node and the longitude of periastron, cosine priors for inclination, and Gaussian priors for eccentricity N~(0, 0.3) (Hogg2010). We assume the Meyer 2025 et al. model. For each set of orbital parameters, we generate evenly spaced in time and assess detectability across an even grid of companion masses and semimajor axes. Each survey is a realization. The same set of orbital parameters is applied to every target. For low-mass planets, we utilize the BEX evolutionary models (Linder2019), while for higher-mass companions, we use the ATMO 2020 models (Phillips2020).")
+
+# Radio button to select stellar type
+st.write( "Select the stellar spectral type and configure the model parameters. Default values are based on the Meyer 2025 model.")
+st_type = st.radio("Spectral Type:",("M Dwarfs", "FGK", "A Stars"))
+
+#values in log base-10
+if st_type == "M Dwarfs":
+    mean_bd = 1.43
+    sigma_bd = 1.21 # Winters
+elif st_type == "FGK":
+    mean_bd = 1.68
+    sigma_bd = np.log10(50) #Raghavan
+elif st_type == "A Stars":
+    mean_bd = np.log10(522)# De Rosa (x1.35 DM91)
+    sigma_bd = 0.92
+mu_m = np.log(10**mean_bd)
+s_m =  np.log(10**sigma_bd)
 
 # Parameters stored in a class
 p = input_pams()
-
-#hardcoded
-# Use q-ratio instead of masses for BDs?
 p.q_flag_bd = 1    # 1 == Yes for q-ratio, otherwise m will be in solar masses.
 p.q_flag_pl = 1
+
+# Model parameters
+col1, col2 = st.columns(2)
+
+# Conversion constant from natural log to log_10
+constant = 2.302585092994046
+mu_natural = 1.32    #ln
+sigma_pl_ln = 0.53   #ln
+mu_pl_value = mu_natural/constant     #log10
+sigma_pl_value = sigma_pl_ln/constant #log10
+
+# Brown Dwarf parameters in col1
+with col1:
+    alpha_bd = st.slider(r'$\mathrm{\alpha_{bd}}$', min_value=-2.0, max_value=2.0, value=-0.36, step=0.01)
+    A_bd_ln = st.slider(r'$\mathrm{ln(A_{bd})}$', min_value=-10.0, max_value=0.0, value=-3.78, step=0.01)
+    mean_bd = st.slider(
+        r'$\mathrm{log_{10}(\mu_{bd})}$',
+        min_value=0.0,
+        max_value=3.0,
+        value=mean_bd,
+        step=0.01,
+        key="mean_bd_slider"
+    )
+    sigma_bd = st.slider(
+        r'$\mathrm{log_{10}(\sigma_{bd})}$',
+        min_value=0.0,
+        max_value=3.0,
+        value=sigma_bd,
+        step=0.01,
+        key="sigma_bd_slider"
+    )
+
+# Giant Planet parameters in col2
+with col2:
+    alpha_gp = st.slider(r'$\mathrm{\alpha_{pl}}$', min_value=0.0, max_value=3.0, value=1.43, step=0.01)
+    A_pl_ln = st.slider(r'$\mathrm{ln(A_{pl})}$', min_value=-10.0, max_value=0.0, value=-5.52, step=0.01)
+    mu_pl = st.slider(
+        r'$\mathrm{log_{10}(\mu_{pl})}$',
+        min_value=0.0,
+        max_value=3.0,
+        value=mu_pl_value,
+        step=0.01
+    )
+    sigma_pl = st.slider(
+        r'$\mathrm{log_{10}(\sigma_{pl})}$',
+        min_value=0.0,
+        max_value=3.0,
+        value=sigma_pl_value,  # Default or static value
+        step=0.01
+    )
+# Calculate updated values
+A_bd = np.exp(A_bd_ln)
+A_pl = np.exp(A_pl_ln)
+
 
 #### PLANET PARAMETERS ###
 p.alpha = 1.43
 p.A_pl = np.exp(-5.52)  #1 Normalization Variable
-#p.median_loga = 0.57 #SHINE Vigan 2021 #peak of log-normal distribution
-#p.sigma = 0.23
 mu_natural = 1.32   #ln
 sigma_pl_ln = 0.53  #ln
 p.median_loga = mu_natural
 p.sigma = sigma_pl_ln
-
 #### BD PARAMETERS ###
 p.A_bd = np.exp(-3.78)
 p.alpha_bd = -0.36 #was 0.25, depends on
-p.median_loga_bd = 1.43   ## Extrapolated from Solar to BD
-p.sigma_bd = 1.21 #SPHERE SHINE survey
+p.median_loga_bd = mean_bd   ## Extrapolated from Solar to BD
+p.sigma_bd = sigma_bd #SPHERE SHINE survey
+
 
 st.write("Enter user input parameters, then click run for the simulations. Specify the normalization frequency within a certain separation-mass space. Then specify the limits for which the random companions will be generated.")
 
@@ -176,6 +255,7 @@ st.write("Enter user input parameters, then click run for the simulations. Speci
 # Planets
 # Number of real planets
 p.n_real = st.slider("Number of Surveys/Realizations", min_value=1, max_value=10000, value=100)
+
 # Normalization bounds for planets
 st.subheader("Normalization Limits for Planets")
 # Planet frequency
@@ -251,9 +331,8 @@ p.a_min_bd, p.a_max_bd = st.slider(
     value=(0.0, 108.0)
 )
 
-#Let user choose model assumptions
+#Evolutionary Model
 st.subheader("Model Assumptions")
-st.write("The mass distributions are assumed to be power-law with index of -1.43 and 0.36 for planets and brown dwarfs, repectively, from Meyer 2024.")
 pl_type = st.radio("Planet Model:", ("Super-Jupiter (> 1 MJ)", "Sub-Jupiter (< 1 MJ)"))
 
 if pl_type == "Super-Jupiter (> 1 MJ)":
@@ -261,18 +340,23 @@ if pl_type == "Super-Jupiter (> 1 MJ)":
 elif pl_type == "Sub-Jupiter (< 1 MJ)":
     p.planet_sma = "flat"
 
-#############################################
 # Generating masses, SMAs, eccentricities and inclinations
 d = generate_distributions(p)
 
+#############################################
+# Define distribution Models
+######################################################
+
+# If distribution assumes the sub-Jupiter distribution:
 #if p.planet_sma == 'flat':
 #    d.adis = 1 / (d.a * np.log10(p.a_max_pl / p.a_min_pl))  # Restructure sma distribution after normalizing
 
+constant = 0.19
 def orbital_dist_subJupiter(a):
     if a <= 10:
-        return (np.exp(-(np.log10(a) - p.median_loga) ** 2/(2* p.sigma ** 2)))#/(np.sqrt(2*np.pi)*sigma_pl_ln*a)
+        return (np.exp(-(np.log(a) - p.median_loga) ** 2/(2* p.sigma ** 2)))#/(np.sqrt(2*np.pi)*sigma_pl_ln*a)
     else:
-        return 0.84#
+        return constant#
         
 if p.planet_sma == 'flat':
     a_min = p.a_min_pl
@@ -285,16 +369,19 @@ if p.planet_sma == 'flat':
         a_values_m1 = np.linspace(a_min,10, 500)#/(np.sqrt(2*np.pi)*2*p.sigma*a)
         f_subJ1 =  [orbital_dist_subJupiter(a)/(np.sqrt(2*np.pi)*2*p.sigma*a) for a in a_values_m1]
         a_values_m2 = np.linspace(10,a_max, 500)
-        f_subJ2 = [0.84/(a*np.log(a_max/10)) for a in a_values_m2]
+        f_subJ2 = [constant/(a*np.log(a_max/10)) for a in a_values_m2]
         adis = list(f_subJ1) + list(f_subJ2)
     elif a_min>10 and a_max >10:
         a_values_m = np.linspace(a_min,a_max, 1000)
-        adis = [0.84/(a*np.log(a_max/a_min)) for a in a_values_m]
+        adis = [constant/(a*np.log(a_max/a_min)) for a in a_values_m]
         
     adis_flat = np.array(adis)
 
 ## Generating and detecing planet and BD properties ##
 ######################################################
+# This is the important part
+######################################################
+
 # Defining all vectors for detection statistics
 n_real = p.n_real
 nn = np.zeros(n_real)
@@ -318,16 +405,11 @@ combined_bd_detected = np.zeros(n_real)
 bd_detected_fraction = np.zeros(n_star)
 
 ##START calculation
-p.model = p.model_bd = st.radio("Evol Model", ("BEX"))
+p.model = p.model_bd = st.radio("Evolutionary Model", ("BEX"))
 p.band = p.band_bd = st.radio("Filter Band", ("F356W","F444W","F1000W","F1500W","F2100W"))
 n_star = len(objnam)
 
-import random
-import numpy as np
-from scipy import integrate
-
 # Assuming n_star, objnam, output_path, p, d, star_mass, dist, age, contr_sep_arr, contr_mag_arr, etc. are defined
-
 # Loop over stars
 if st.button('Run'):
     loop_timer = timeit.default_timer()
@@ -361,6 +443,7 @@ if st.button('Run'):
         j = np.where( (d.a>= p.an_min_bd) & (d.a<= p.an_max_bd))[0]
         inta = integrate.simps(d.adis_bd[j], np.log10(d.a[j]))
         k_bd = p.P_bd/(intm*inta)
+        
         # Can't have companion mass greater than stellar mass
         if p.m_max_bd > star_mass[ii]:
             tmp_m_max_bd = star_mass[ii]
@@ -394,7 +477,7 @@ if st.button('Run'):
         k_pl = p.P_pl/(intm*inta)
         
         if p.q_flag_pl == 1:
-            qdis_pl = (d.mdis_ref.val/star_mass[ii])**-p.alpha
+            qdis_pl = (d.mdis_ref.val/star_mass[ii])**(-p.alpha)
 #            d.k_pl = 1/p.A_pl
             if p.planet_sma == 'lognormal':
                 Ppl = prob_mean(d.q, qdis_pl, d.a, adis_pl, p.m_min_pl/star_mass[ii], p.m_max_pl/star_mass[ii],
@@ -705,7 +788,7 @@ try:
     # Initialize the Bokeh figure
     p = figure(title="Planets - "+pl_type,
                x_axis_label="Separation (AU)", y_axis_label="Mass (MJ)",
-               x_axis_type="log", y_range=(0, 20), width=600, height=400)
+               x_axis_type="log", y_range=(0, 1), width=600, height=400)
 
     # Plot generated and detected planets
     p.circle('separation', 'mass', source=source_generated, color="black", size=7, alpha=0.2, legend_label=f"# Generated: {len(gen_pl)}")
