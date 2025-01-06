@@ -28,11 +28,19 @@ st.write(f"Demographics code for characterizing a companion population given the
 now0 = datetime.now()
 
 # Load combined detection limit map (sum of contrast curves of sample over separations and mass ratios)
-detection_limit=fits.open('/nfs/turbo/lsa-mrmeyer/lsa-defurio/CANDID_1.0.5/CANDID-master/secondruntouse/detectionmap_secondrun.fits')
+detection_limit=fits.open('./detectionmap_secondrun.fits')
 detection_limit=detection_limit[0].data
 
+# Create the plot
+fig, ax = plt.subplots(figsize=(5,3))
+im = ax.imshow(detection_limit, origin='lower', aspect='auto', cmap='viridis')
+cbar = fig.colorbar(im, ax=ax, label='Detection Limit')
+
+# Display the plot in Streamlit
+st.pyplot(fig)
+
 # Load properties of detections (sep, mass ratio)
-observed_a, observed_q=np.loadtxt('/nfs/turbo/lsa-mrmeyer/lsa-defurio/MultiNest_companion_population/Sep6/paper_all_detections.dat', unpack=True, usecols=[0,1])
+observed_a, observed_q=np.loadtxt('./paper_all_detections.dat', unpack=True, usecols=[0,1])
 observed_q=np.array(observed_q)
 observed_a=np.array(observed_a)
 log_observed_a=np.log10(observed_a)
@@ -141,33 +149,51 @@ def loglike(cube, ndim, nparams):
         poisson_likelihood=np.log10(poisson_likelihood)
     loglikelihood = prob_n+poisson_likelihood
     return loglikelihood
+    
+# Streamlit UI
+st.title("MultiNest Runner")
+st.write("Press the **Run** button to execute the MultiNest algorithm.")
 
-# Setup and outputs for MultiNest
-datafile='./Sep6/lognorma_powerq/outputs_chara_secondrun_lin/'
-parameters = ["alpha", "freq", "loga", "sigmaa"]
-n_params = len(parameters)
+# Run button
+if st.button("Run MultiNest"):
+    # Initialize variables and setup
+    datafile = './multinest_result/'
+    parameters = ["alpha", "freq", "loga", "sigmaa"]
+    n_params = len(parameters)
+    iterations = 10
+    json.dump(parameters, open(datafile + '_params.json', 'w'))
 
-json.dump(parameters, open(datafile + '_params.json', 'w')) # save parameter names
+    # Record start time
+    now = datetime.now()
 
-# Run MultiNest
-iterations=5000
-now = datetime.now()
-pymultinest.run(loglike, prior, n_params, importance_nested_sampling = True, resume = False, verbose = True, sampling_efficiency = 'model', max_iter=iterations, n_live_points = 400, outputfiles_basename=datafile + '_')
+    # Run MultiNest
+    with st.spinner('Running MultiNest...'):
+        pymultinest.run(
+            loglike, prior, n_params,
+            importance_nested_sampling=True,
+            resume=False,
+            verbose=True,
+            sampling_efficiency='model',
+            max_iter=iterations,
+            n_live_points=10,
+            outputfiles_basename=datafile + '_'
+        )
 
-# Get MultiNest outputs
-aa = pymultinest.Analyzer(outputfiles_basename=datafile + '_', n_params = n_params)
-a_lnZ = aa.get_stats()['global evidence']
-bestfit = aa.get_best_fit()
-bestfit_parameters = np.array(bestfit['parameters'])
-bestfit_loglike = bestfit['log_likelihood']
-print(bestfit_parameters)
-print(bestfit_loglike)
-print('************************')
-print('MAIN RESULT: Evidence Z ')
-print('************************')
-print('  log Z for model with 1 line = %.3f' % (a_lnZ))
-print()
-now1 = datetime.now()
-time_to_run=now1-now0
-print('Time to run code: ', time_to_run)
+    # Retrieve and display outputs
+    aa = pymultinest.Analyzer(outputfiles_basename=datafile + '_', n_params=n_params)
+    #a_lnZ = aa.get_stats()['global evidence']
+    bestfit = aa.get_best_fit()
+    bestfit_parameters = np.array(bestfit['parameters'])
+    bestfit_loglike = bestfit['log_likelihood']
+    now1 = datetime.now()
+    time_to_run = now1 - now
 
+    # Display results
+    st.success("MultiNest run completed!")
+    st.write("Best-fit parameters:")
+    # Display each parameter with its best-fit value
+    for param, value in zip(parameters, bestfit_parameters):
+        st.write(f"{param}: {value:.3f}")
+    st.write(f"Best-fit log-likelihood: {bestfit_loglike:.3f}")
+    #st.write(f"Log Evidence (Z): {a_lnZ:.3f}")
+    st.write(f"Time to run code: {time_to_run}")
