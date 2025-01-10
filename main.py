@@ -21,9 +21,7 @@ import importlib
 
 pages = {
     "Demographics": [
-        st.Page("frequency.py", title="Frequency Calculator"),
-        st.Page("yield.py", title="Yield Calculator"),
-        #st.Page("Bayesian.py", title="Bayesian"),
+        st.Page("frequency.py", title="Frequency Calculator")
     ]
 }
 

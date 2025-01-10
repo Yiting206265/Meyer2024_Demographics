@@ -128,7 +128,7 @@ st.markdown(
 
 # Radio button to select stellar type
 st_type = st.radio(
-    "Select a Stellar Spectral Type, then click the 'Update' button to update the brown dwarf log-normal distributions for the selected stellar type. Ensure you first select the stellar type, followed by clicking the 'Update' button, in that order. The updated values should be reflected in the slider bars above.",
+    "Select a Stellar Spectral Type, then click the 'Update' button to update the brown dwarf log-normal distributions for the selected stellar type. Make sure that you first select the stellar type, followed by clicking the 'Update' button, in that order. The updated values should be reflected in the slider bars above.",
     ("M Dwarfs", "FGK", "A Stars"),  # Without the "Update" button here
     index=("M Dwarfs", "FGK", "A Stars").index(st.session_state.stellar_type),
     on_change=update_stellar_type
@@ -187,21 +187,30 @@ Jup_min, Jup_max = st.slider(
 
 # Mass ratio calculations
 q_Jupiter = 0.001/host_mass
-d_q = np.logspace(-5, 3, 500)  # Mass ratios from 0.0001 to 1 on a logarithmic scale
+d_q_gp = np.logspace(np.log10(0.1*q_Jupiter), np.log10(0.1), 500) # 30 Earth mass to 0.1 host star mass
+d_q_bd = np.logspace(np.log10(3*q_Jupiter), np.log10(1), 500)  # 3 Jupiter mass to 1 host star mass
 
 # Brown Dwarf model distribution (mass ratio)
-a2_bd = d_q ** -alpha_bd
+a2_bd = d_q_bd ** -alpha_bd
 # Giant Planet model distribution (mass ratio)
-a2_gp = d_q ** -alpha_gp
+a2_gp = d_q_gp ** -alpha_gp
 
 # Create plots for both distributions side by side
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(17, 6))
 # Plotting normalized mass ratio distributions
-ax1.plot(d_q, a2_bd, color='r', linewidth = 2,label='Brown Dwarf Model')
-ax1.plot(d_q, a2_gp, color='blue',linewidth = 2, label='Giant Planet Model')
+ax1.plot(d_q_bd, a2_bd, color='r', linewidth = 2,label='Brown Dwarf Model')
+ax1.plot(d_q_gp, a2_gp, color='blue',linewidth = 2, label='Giant Planet Model')
 
 ax1.set_xscale('log')
 ax1.set_yscale('log')
+
+# Create a custom formatter for the x-axis
+def log_formatter(x, pos):
+    return f'{x:.3g}'  # Format with general float, trims unnecessary zeros
+
+# Apply the custom formatter for the x-axis
+ax1.xaxis.set_major_formatter(FuncFormatter(log_formatter))
+
 
 # Calculate mass ratio limits
 mass_ratio_min = Jup_min * q_Jupiter
@@ -277,84 +286,3 @@ f_pl = A_pl*np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a 
 # Display results in Streamlit
 st.write(f"Mean Number of Planets Per Star:", f_pl)
 st.write(f"Mean Number of Brown Dwarfs Per Star:", f_bd)
-
-##############################################################################
-#Section 4 - Sub-Jupiter Model
-##############################################################################
-
-st.subheader("Sub-Jupiter Model (< 1 MJ)")
-st.write("For planets with masses less than 1 Jupiter mass, we have developed a customized sub-Jupiter model. The orbital distribution within 10 AU follows the same pattern as the giant planet model (cf. Fulton 2021), but with a log-flat distribution and constant density beyond 10 AU.")
-
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(17, 6))
-
-# Plotting mass ratio distributions
-ax1.plot(d_q, a2_gp, color='C1', linewidth=2,label='Sub-Jupiter Model')
-ax1.set_xscale('log')
-ax1.set_yscale('log')
-
-# Calculate mass ratio limits
-mass_ratio_min = Jup_min * q_Jupiter
-mass_ratio_max = Jup_max * q_Jupiter
-
-# Add vertical lines for mass ratio limits
-ax1.axvline(x=mass_ratio_min, color='green', linestyle='--', label=f'Min Mass Ratio = {mass_ratio_min:.2f}')
-ax1.axvline(x=mass_ratio_max, color='purple', linestyle='--', label=f'Max Mass Ratio = {mass_ratio_max:.2f}')
-ax1.axvspan(mass_ratio_min, mass_ratio_max, color='gray', alpha=0.3)
-
-# Configure mass ratio distribution plot
-ax1.set_xlabel('Mass Ratio q', fontsize=20, labelpad=10.4)
-ax1.set_ylabel('Probability Density', fontsize=20, labelpad=10.4)
-ax1.tick_params(axis='both', which='major', labelsize=15)
-ax1.legend(loc='upper right', fontsize=12)
-ax1.set_title("Mass Ratio Distribution", fontsize=18)
-
-# Define orbital separation distributions for sub-Jupiters
-def orbital_dist_subJupiter(a):
-    if a <= 10:
-        return orbital_dist_pl(a)
-    else:
-        return 0.19
-
-# Create a log-scaled range for plotting
-a_values = np.logspace(-3, 5, 500, base=10)  # Values from 0.01 to 1000, log-scaled
-sub_jupiter_values = [orbital_dist_subJupiter(a) for a in a_values]
-# Plotting the distributions
-ax2.plot(np.log10(a_values),sub_jupiter_values, label='Sub-Jupiter Model', color='C1')
-
-# Add vertical lines for min and max separations
-ax2.axvline(x=np.log10(a_min), color='green', linestyle='--', label=f'Min Separation = {a_min:.2f} AU')
-ax2.axvline(x=np.log10(a_max), color='purple', linestyle='--', label=f'Max Separation = {a_max:.2f} AU')
-ax2.axvspan(np.log10(a_min), np.log10(a_max), color='gray', alpha=0.3)
-
-# Configure semi-major axis distribution plot
-ax2.set_xlabel('Semi-Major Axis (ln AU)', fontsize=20, labelpad=10.4)
-ax2.set_ylabel('Probability Density', fontsize=20, labelpad=10.4)
-ax2.tick_params(axis='both', which='major', labelsize=15)
-ax2.legend(loc='upper right', fontsize=12)
-ax2.set_title("Semi-Major Axis Distribution", fontsize=18)
-ax2.set_ylim(0,1.5)
-ax2.xaxis.set_major_formatter(FuncFormatter(log10_formatter))
-
-# Display the plots
-st.pyplot(fig)
-
-# Define the range for orbital distances and mass ratios using correct log_10 ranges
-mass_ratio_values = np.linspace(Jup_min * q_Jupiter, Jup_max * q_Jupiter, 500)
-if a_min<=10 and a_max <=10:
-    a_values_m = np.linspace(a_min,a_max, 500)
-    f_subJ =  A_pl*np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a in a_values_m], a_values_m) * \
-       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
-elif a_min<=10 and a_max>10:
-    a_values_m1 = np.linspace(a_min,10, 500)
-    f_subJ1 = A_pl* np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a in a_values_m], a_values_m) * np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
-    a_values_m2 = np.linspace(10,a_max, 500)
-    f_subJ2 = A_pl* np.trapz([0.19/(a*np.log(a_max/10)) for a in a_values_m2], a_values_m2) * \
-       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
-    f_subJ = f_subJ1 + f_subJ2
-elif a_min>10 and a_max >10:
-    a_values_m = np.linspace(a_min,a_max, 500)
-    f_subJ = A_pl* np.trapz([0.19/(a*np.log(a_max/10)) for a in a_values_m], a_values_m) * \
-       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
-       
-# Display results in Streamlit
-st.write(f"Mean Number of Companions Per Star:", f_subJ)
