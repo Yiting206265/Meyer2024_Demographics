@@ -128,7 +128,7 @@ st.markdown(
 
 # Radio button to select stellar type
 st_type = st.radio(
-    "Select a Stellar Spectral Type, then click the 'Update' button to update the brown dwarf log-normal distributions for the selected stellar type. Make sure that you first select the stellar type, followed by clicking the 'Update' button, in that order. The updated values should be reflected in the slider bars above.",
+    "Select a Stellar Spectral Type, then click 'Update' to refresh the brown dwarf log-normal distributions. Ensure you select the stellar type before clicking 'Update.' Updated values will appear in the sliders above. Note that you can use left/right arrow keys to fine-tune slider values.",
     ("M Dwarfs", "FGK", "A Stars"),  # Without the "Update" button here
     index=("M Dwarfs", "FGK", "A Stars").index(st.session_state.stellar_type),
     on_change=update_stellar_type
