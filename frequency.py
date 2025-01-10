@@ -23,13 +23,44 @@ from matplotlib.ticker import FuncFormatter
 
 # Start of code
 
-##############################################################################
-#Section 1 - Model Parameters
-##############################################################################
 # Display title
 st.title("Composite Model for Exoplanet and Brown Dwarf Companions")
 st.caption("Based on Meyer et al. (2025)")
 
+##############################################################################
+#Section 2 - Host Star Parameters
+##############################################################################
+
+st.subheader("Host Star Parameters")
+
+
+# Radio button to select stellar type
+st_type = st.radio(
+    "Select a Stellar Spectral Type to update the brown dwarf log-normal distributions: M dwarfs follow Winters et al. (2019); FGK stars follow Raghavan et al. (2010); and A stars follow De Rosa et al. (2014), corrected for physical separation (x1.35 DM91). Updated values will be reflected in the sliders and graphs below. Note that you can fine-tune the slider values using the left/right arrow keys.",
+    ("M Dwarfs", "FGK", "A Stars")
+)
+
+#the session updates are delayed, displays previous values
+if st_type == "M Dwarfs":
+    s_bd = 1.21
+    mu_bd = 1.43             #Winters
+elif st_type == "FGK":
+    s_bd = 1.68
+    mu_bd = 1.70
+elif st_type == "A Stars":
+    s_bd = 0.79
+    mu_bd = 2.72            # De Rosa (x1.35 DM91)
+
+s_m =  np.log(10**s_bd)    # Winters
+mu_m = np.log(10**mu_bd)
+
+# User input for mass parameters
+host_mass = st.slider("Host Mass ($\mathrm{M_{\odot}}$)", min_value=0.001,max_value=5.0,value=0.3,step=0.001)
+
+
+##############################################################################
+#Section 1 - Model Parameters
+##############################################################################
 # Create columns for a vertical arrangement of sliders
 st.subheader("Model Parameters")
 st.write(
@@ -46,14 +77,14 @@ sigma_pl_ln = 0.53   #ln
 mu_pl_value = mu_natural/constant     #log10
 sigma_pl_value = sigma_pl_ln/constant #log10
 
-if "mean_bd" not in st.session_state:
-    st.session_state.mean_bd = 1.43
-if "sigma_bd" not in st.session_state:
-    st.session_state.sigma_bd = 1.21
-if "stellar_type" not in st.session_state:
-    st.session_state.stellar_type = "M Dwarfs"
-if "force_refresh" not in st.session_state:
-    st.session_state.force_refresh = False  # Initialize the flag for forcing refresh
+#if "mean_bd" not in st.session_state:
+#    st.session_state.mean_bd = 1.43
+#if "sigma_bd" not in st.session_state:
+#    st.session_state.sigma_bd = 1.21
+#if "stellar_type" not in st.session_state:
+#    st.session_state.stellar_type = "M Dwarfs"
+#if "force_refresh" not in st.session_state:
+#    st.session_state.force_refresh = False  # Initialize the flag for forcing refresh
 
 # Brown Dwarf parameters in col1
 with col1:
@@ -63,7 +94,7 @@ with col1:
         r'$\mathrm{log_{10}(\mu_{bd})}$',
         min_value=0.0,
         max_value=3.0,
-        value=st.session_state.mean_bd,
+        value=mu_bd,
         step=0.01,
         key="mean_bd_slider"
     )
@@ -71,7 +102,7 @@ with col1:
         r'$\mathrm{log_{10}(\sigma_{bd})}$',
         min_value=0.0,
         max_value=3.0,
-        value=st.session_state.sigma_bd,
+        value=s_bd,
         step=0.01,
         key="sigma_bd_slider"
     )
@@ -95,84 +126,9 @@ with col2:
         step=0.01
     )
 
-##############################################################################
-#Section 2 - Host Star Parameters
-##############################################################################
-
-st.subheader("Host Star Parameters")
-
-# Define function to update session state based on stellar type
-def update_stellar_type():
-    st.session_state.force_refresh = not st.session_state.force_refresh  # Toggle the trigger
-    
-# Add custom styling for the Update button
-st.markdown(
-    """
-    <style>
-    .update-button {
-        background-color: #4CAF50;  /* Green background */
-        color: white;  /* White text */
-        border: none;
-        padding: 10px 20px;
-        font-size: 16px;
-        cursor: pointer;
-        border-radius: 5px;
-    }
-    .update-button:hover {
-        background-color: #45a049;  /* Darker green on hover */
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# Radio button to select stellar type
-st_type = st.radio(
-    "Select a Stellar Spectral Type, then click 'Update' to refresh the brown dwarf log-normal distributions. Ensure you select the stellar type before clicking 'Update.' Updated values will appear in the sliders above. Note that you can use left/right arrow keys to fine-tune slider values.",
-    ("M Dwarfs", "FGK", "A Stars"),  # Without the "Update" button here
-    index=("M Dwarfs", "FGK", "A Stars").index(st.session_state.stellar_type),
-    on_change=update_stellar_type
-)
-
-# Custom "Update" button with different styling
-update_button = st.button(
-    "Update",
-    key="update_button",
-    help="Click to update the parameters based on the selected stellar type",
-    use_container_width=True
-)
-
-# Check if the "Update" button was clicked
-if update_button:
-    update_stellar_type()  # Call the function to update the parameters
-
-#the session updates are delayed, displays previous values
-if st_type == "M Dwarfs":
-    s_m =  np.log(10**1.21)    # Winters
-    mu_m = np.log(10**1.43)
-    st.session_state.mean_bd = 1.43
-    st.session_state.sigma_bd = 1.21
-elif st_type == "FGK":
-    s_m = np.log(10**1.68)
-    mu_m = np.log(50)
-    st.session_state.mean_bd = 1.68
-    st.session_state.sigma_bd = np.log10(50)
-elif st_type == "A Stars":
-    s_m = np.log(10**0.92)
-    mu_m = np.log(522)            # De Rosa (x1.35 DM91)
-    st.session_state.mean_bd = np.log10(522)
-    st.session_state.sigma_bd = 0.92
-
-# Update slider values based on the session state
-# Store the current stellar type in session state
-st.session_state.stellar_type = st_type
-
 # Calculate updated values
 A_bd = np.exp(A_bd_ln)
 A_pl = np.exp(A_pl_ln)
-
-# User input for mass parameters
-host_mass = st.slider("Host Mass ($\mathrm{M_{\odot}}$)", min_value=0.001,max_value=5.0,value=0.3,step=0.001)
 
 ##############################################################################
 #Section 3 - Companion Parameters
