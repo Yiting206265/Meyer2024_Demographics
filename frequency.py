@@ -28,6 +28,20 @@ st.title("Composite Model for Exoplanet and Brown Dwarf Companions")
 st.caption("Based on Meyer et al. (2025)")
 
 ##############################################################################
+#Section 1 - Intro Paragraph
+##############################################################################
+
+
+st.write("""Welcome to the on-line tool based on Meyer et al. (submitted) meant to provide estimates of the expectation values of the mean number of gas giant planets per star and the mean number of brown dwarfs per star generated from our model. The model assumes that the companion mass ratio of gas giants and brown dwarf companions does not vary with orbital separation. However, it explicitly treats brown dwarf companions as an extension of stellar mass companions drawn from the same orbital separations as a function of host star mass. 
+
+In the paper we fit the orbital distribution of gas giants and find that a log-normal function provides a good fit, with a peak near 4 AU (two parameters). We also fit for power-law exponents for the companion mass ratio distributions for the brown dwarf companions and gas giant populations separately (two parameters). Finally, we fit for the normalization of both populations (two parameters).  
+
+The data are fitted to 51 point estimates of companion frequency over specified mass ranges and orbital separations found in the literature. Please read the paper available at (archive) for details. As our model is fitted in the context of distributions of mass ratios of companions to host stars, you need to select the stellar mass of the host, as well as model parameters for the function form of the fits (best fits from our paper are defaults). Finally one must choose the mass range of companion of interest, as well as the orbital separation range of interest. The model is integrated to provide the expectation value of our model over the ranges indicated for both populations.  
+
+If you are interested in using this model for a given target list and sensitivity curves to predict survey yields, please contact us to learn more.""")
+
+
+##############################################################################
 #Section 2 - Host Star Parameters
 ##############################################################################
 
@@ -58,7 +72,7 @@ mu_m = np.log(10**mu_bd)
 host_mass = st.number_input("Host Mass ($\mathrm{M_{\odot}}$)", min_value=0.0001, max_value=10.0, value=0.3, step=0.001)
 
 ##############################################################################
-#Section 1 - Model Parameters
+#Section 3 - Model Parameters
 ##############################################################################
 # Create columns for a vertical arrangement of sliders
 st.subheader("Model Parameters")
@@ -130,7 +144,7 @@ A_bd = np.exp(A_bd_ln)
 A_pl = np.exp(A_pl_ln)
 
 ##############################################################################
-#Section 3 - Companion Parameters
+#Section 4 - Companion Parameters
 ##############################################################################
 
 st.subheader("Companion Parameters")
