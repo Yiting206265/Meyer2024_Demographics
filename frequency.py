@@ -34,9 +34,9 @@ st.caption("Based on Meyer et al. (2025)")
 
 st.write("""Welcome to the on-line tool based on Meyer et al. (submitted) meant to provide estimates of the expectation values of the mean number of gas giant planets per star and the mean number of brown dwarfs per star generated from our model. The model assumes that the companion mass ratio of gas giants and brown dwarf companions does not vary with orbital separation. However, it explicitly treats brown dwarf companions as an extension of stellar mass companions drawn from the same orbital separations as a function of host star mass. 
 
-In the paper we fit the orbital distribution of gas giants and find that a log-normal function provides a good fit, with a peak near 4 AU (two parameters). We also fit for power-law exponents for the companion mass ratio distributions for the brown dwarf companions and gas giant populations separately (two parameters). Finally, we fit for the normalization of both populations (two parameters).  
+In the paper we fit the orbital distribution of gas giants and find that a log-normal function provides a good fit, with a peak near 3 AU (two parameters). We also fit for power-law exponents for the companion mass ratio distributions for the brown dwarf companions and gas giant populations separately (two parameters). Finally, we fit for the normalization of both populations (two parameters).  
 
-The data are fitted to 51 point estimates of companion frequency over specified mass ranges and orbital separations found in the literature. Please read the paper available at (archive) for details. As our model is fitted in the context of distributions of mass ratios of companions to host stars, you need to select the stellar mass of the host, as well as model parameters for the function form of the fits (best fits from our paper are defaults). Finally one must choose the mass range of companion of interest, as well as the orbital separation range of interest. The model is integrated to provide the expectation value of our model over the ranges indicated for both populations.  
+The data are fitted to 50 point estimates of companion frequency over specified mass ranges and orbital separations found in the literature. Please read the paper available at (archive) for details. As our model is fitted in the context of distributions of mass ratios of companions to host stars, you need to select the stellar mass of the host, as well as model parameters for the function form of the fits (best fits from our paper are defaults). Finally one must choose the mass range of companion of interest, as well as the orbital separation range of interest. The model is integrated to provide the expectation value of our model over the ranges indicated for both populations.  
 
 If you are interested in using this model for a given target list and sensitivity curves to predict survey yields, please contact us to learn more.""")
 
@@ -85,8 +85,8 @@ col1, col2 = st.columns(2)
 
 # Conversion constant from natural log to log_10
 constant = 2.302585092994046
-mu_natural = 1.32    #ln
-sigma_pl_ln = 0.53   #ln
+mu_natural = 1.15    #ln
+sigma_pl_ln = 0.23   #ln
 mu_pl_value = mu_natural/constant     #log10
 sigma_pl_value = sigma_pl_ln/constant #log10
 
@@ -101,8 +101,8 @@ sigma_pl_value = sigma_pl_ln/constant #log10
 
 # Brown Dwarf parameters in col1
 with col1:
-    alpha_bd = st.slider(r'$\mathrm{\alpha_{bd}}$', min_value=-2.0, max_value=2.0, value=-0.36, step=0.01)
-    A_bd_ln = st.slider(r'$\mathrm{ln(A_{bd})}$', min_value=-10.0, max_value=0.0, value=-3.78, step=0.01)
+    alpha_bd = st.slider(r'$\mathrm{\alpha_{bd}}$', min_value=-2.0, max_value=2.0, value=-5.28, step=0.01)
+    A_bd_ln = st.slider(r'$\mathrm{ln(A_{bd})}$', min_value=-10.0, max_value=5.0, value=-0.21, step=0.01)
     mean_bd = st.slider(
         r'$\mathrm{log_{10}(\mu_{bd})}$',
         min_value=0.0,
@@ -122,8 +122,8 @@ with col1:
 
 # Giant Planet parameters in col2
 with col2:
-    alpha_gp = st.slider(r'$\mathrm{\alpha_{pl}}$', min_value=0.0, max_value=3.0, value=1.43, step=0.01)
-    A_pl_ln = st.slider(r'$\mathrm{ln(A_{pl})}$', min_value=-10.0, max_value=0.0, value=-5.52, step=0.01)
+    alpha_gp = st.slider(r'$\mathrm{\alpha_{pl}}$', min_value=0.0, max_value=3.0, value=1.32, step=0.01)
+    A_pl_ln = st.slider(r'$\mathrm{ln(A_{pl})}$', min_value=-10.0, max_value=5.0, value=-5.13, step=0.01)
     mu_pl = st.slider(
         r'$\mathrm{log_{10}(\mu_{pl})}$',
         min_value=0.0,
