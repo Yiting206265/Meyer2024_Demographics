@@ -24,7 +24,7 @@ from matplotlib.ticker import FuncFormatter
 # Start of code
 
 # Display title
-st.title("Composite Model for Exoplanet and Brown Dwarf Companions")
+st.title("Occurrence Rate Estimator for Planets and Brown Dwarfs ")
 st.caption("Companion population model from Meyer et al. (2025)")
 
 ##############################################################################
