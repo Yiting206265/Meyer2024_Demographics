@@ -85,8 +85,8 @@ col1, col2 = st.columns(2)
 
 # Conversion constant from natural log to log_10
 constant = 2.302585092994046
-mu_natural = 1.15    #ln
-sigma_pl_ln = 0.23   #ln
+mu_natural = 1.30    #ln
+sigma_pl_ln = 0.215   #ln
 mu_pl_value = mu_natural/constant     #log10
 sigma_pl_value = sigma_pl_ln/constant #log10
 
@@ -101,8 +101,8 @@ sigma_pl_value = sigma_pl_ln/constant #log10
 
 # Brown Dwarf parameters in col1
 with col1:
-    alpha_bd = st.slider(r'$\mathrm{\alpha_{bd}}$', min_value=-2.0, max_value=2.0, value=-5.28, step=0.01)
-    A_bd_ln = st.slider(r'$\mathrm{ln(A_{bd})}$', min_value=-10.0, max_value=5.0, value=-0.21, step=0.01)
+    alpha_bd = st.slider(r'$\mathrm{\alpha_{bd}}$', min_value=-2.0, max_value=2.0, value=-0.292, step=0.01)
+    A_bd_ln = st.slider(r'$\mathrm{ln(A_{bd})}$', min_value=-10.0, max_value=5.0, value=-1.41, step=0.01)
     mean_bd = st.slider(
         r'$\mathrm{log_{10}(\mu_{bd})}$',
         min_value=0.0,
@@ -122,8 +122,8 @@ with col1:
 
 # Giant Planet parameters in col2
 with col2:
-    alpha_gp = st.slider(r'$\mathrm{\alpha_{pl}}$', min_value=0.0, max_value=3.0, value=1.32, step=0.01)
-    A_pl_ln = st.slider(r'$\mathrm{ln(A_{pl})}$', min_value=-10.0, max_value=5.0, value=-5.13, step=0.01)
+    alpha_gp = st.slider(r'$\mathrm{\alpha_{pl}}$', min_value=0.0, max_value=3.0, value=1.29, step=0.01)
+    A_pl_ln = st.slider(r'$\mathrm{ln(A_{pl})}$', min_value=-10.0, max_value=5.0, value=-4.77, step=0.01)
     mu_pl = st.slider(
         r'$\mathrm{log_{10}(\mu_{pl})}$',
         min_value=0.0,
