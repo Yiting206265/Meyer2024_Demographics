@@ -69,7 +69,14 @@ s_m =  np.log(10**s_bd)    # Winters
 mu_m = np.log(10**mu_bd)
 
 # User input for mass parameters
-host_mass = st.number_input("Host Mass ($\mathrm{M_{\odot}}$)", min_value=0.0001, max_value=10.0, value=0.3, step=0.001)
+host_mass = st.number_input(
+    "Host Mass ($\mathrm{M_{\odot}}$)",
+    min_value=0.0001,
+    max_value=10.0,
+    value=0.3,
+    step=0.01,
+    format="%.2f"
+)
 
 ##############################################################################
 #Section 3 - Model Parameters
