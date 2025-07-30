@@ -155,27 +155,53 @@ A_pl = np.exp(A_pl_ln)
 ##############################################################################
 
 st.subheader("Companion Parameters")
-Jup_min, Jup_max = st.slider(
-    "Companion Mass Range ($\mathrm{M_{Jup}}$)",
-    min_value=0.01,
-    max_value=300.0,
-    value=(1.0, 100.0))
+
+# Create two columns for input fields
+col_mass1, col_mass2 = st.columns(2)
+
+# Input fields for companion mass range
+with col_mass1:
+    Jup_min = st.number_input(
+        "Minimum Companion Mass ($\mathrm{M_{Jup}}$)",
+        min_value=0.03,
+        value=1.0,
+        step=0.1,
+        format="%.4f"
+    )
+
+with col_mass2:
+    Jup_max = st.number_input(
+        "Maximum Companion Mass ($\mathrm{M_{Jup}}$)",
+        value=100.0,
+        step=0.1,
+        format="%.2f"
+    )
+
+# Add validation
+if Jup_min >= Jup_max:
+    st.error("Minimum companion mass must be less than maximum companion mass.")
+    Jup_min = min(Jup_min, Jup_max - 0.01)
 
 # Mass ratio calculations
 q_Jupiter = 0.001/host_mass
-d_q_gp = np.logspace(np.log10(0.1*q_Jupiter), np.log10(0.1), 500) # 30 Earth mass to 0.1 host star mass
-d_q_bd = np.logspace(np.log10(3*q_Jupiter), np.log10(1), 500)  # 3 Jupiter mass to 1 host star mass
 
-# Brown Dwarf model distribution (mass ratio)
-a2_bd = d_q_bd ** -alpha_bd
-# Giant Planet model distribution (mass ratio)
-a2_gp = d_q_gp ** -alpha_gp
+# Extended mass ratio range from 0.0001 to 1
+full_q_range = np.logspace(-4, 0, 1000)  # From 0.0001 to 1
+
+# Calculate power-law distributions with the same slopes across the full range and apply normalization factors
+a2_bd_extended = A_bd * (full_q_range ** -alpha_bd)  # Using same alpha_bd with A_bd normalization
+a2_gp_extended = A_pl * (full_q_range ** -alpha_gp)  # Using same alpha_gp with A_pl normalization
+
+# Calculate the combined distribution (sum of both models)
+combined_values = a2_bd_extended + a2_gp_extended
 
 # Create plots for both distributions side by side
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(17, 6))
-# Plotting normalized mass ratio distributions
-ax1.plot(d_q_bd, a2_bd, color='r', linewidth = 2,label='Brown Dwarf Model')
-ax1.plot(d_q_gp, a2_gp, color='blue',linewidth = 2, label='Giant Planet Model')
+
+# Plotting extended mass ratio distributions
+ax1.plot(full_q_range, a2_bd_extended, color='r', linewidth=2, label='Brown Dwarf Model')
+ax1.plot(full_q_range, a2_gp_extended, color='blue', linewidth=2, label='Giant Planet Model')
+ax1.plot(full_q_range, combined_values, color='orange', linewidth=2, label='Sum of the two')
 
 ax1.set_xscale('log')
 ax1.set_yscale('log')
@@ -205,12 +231,29 @@ ax1.tick_params(axis='both', which='major', labelsize=15)
 ax1.legend(loc='upper right', fontsize=12)
 ax1.set_title("Mass Ratio Distribution", fontsize=18)
 
-# User input for orbital separations using sliders
-a_min, a_max = st.slider(
-    "Orbital Separation Range (AU)",
-    min_value=0.01,
-    max_value=3000.0,
-    value=(1.0, 100.0))
+# User input for orbital separations using number inputs
+col_sep1, col_sep2 = st.columns(2)
+
+with col_sep1:
+    a_min = st.number_input(
+        "Minimum Orbital Separation (AU)",
+        value=1.0,
+        step=0.1,
+        format="%.4f"
+    )
+
+with col_sep2:
+    a_max = st.number_input(
+        "Maximum Orbital Separation (AU)",
+        value=100.0,
+        step=0.1,
+        format="%.2f"
+    )
+
+# Add validation
+if a_min >= a_max:
+    st.error("Minimum orbital separation must be less than maximum orbital separation.")
+    a_min = min(a_min, a_max - 0.01)
 
 # Define orbital separation distributions for Brown Dwarfs and Giant Planets in natural log units
 def orbital_dist_bd(a):
