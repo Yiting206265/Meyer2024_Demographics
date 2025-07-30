@@ -280,6 +280,7 @@ ax2.axvspan(np.log10(a_min), np.log10(a_max), color='gray', alpha=0.3)
 ax2.xaxis.set_major_formatter(FuncFormatter(log10_formatter))
 
 ax2.set_ylim(0,1.5)
+
 # Configure semi-major axis distribution plot
 ax2.set_xlabel('Semi-Major Axis (AU)', fontsize=20, labelpad=10.4)
 ax2.set_ylabel('Probability Density', fontsize=20, labelpad=10.4)
@@ -292,15 +293,26 @@ st.pyplot(fig)
 
 # Define the range for orbital distances and mass ratios using correct log_10 ranges
 mass_ratio_values = np.linspace(Jup_min * q_Jupiter, Jup_max * q_Jupiter, 500)
-a_values_m = np.linspace(a_min,a_max, 500)
 
-# Calculate frequency for Brown Dwarfs using integration with `np.trapz`
-f_bd = A_bd*np.trapz([orbital_dist_bd(a)/(np.sqrt(2 * np.pi)*s_m*a) for a in a_values_m], a_values_m) * \
-       np.trapz([d_q_i ** -alpha_bd for d_q_i in mass_ratio_values], mass_ratio_values)
+# Use logarithmic spacing for orbital separation to better sample the distribution
+a_values_m = np.logspace(np.log10(max(a_min, 0.01)), np.log10(a_max), 1000)
 
-# Re-run integration over corrected distribution ranges
-f_pl = A_pl*np.trapz([orbital_dist_pl(a)/(np.sqrt(2*np.pi)*sigma_pl_ln*a) for a in a_values_m], a_values_m) * \
-       np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
+# Calculate mass ratio distribution integrals
+mass_ratio_integral_bd = np.trapz([d_q_i ** -alpha_bd for d_q_i in mass_ratio_values], mass_ratio_values)
+mass_ratio_integral_gp = np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
+
+# For orbital distributions, we need to properly normalize by the PDF
+# The orbital distributions are log-normal, so we need to include the 1/(a*sigma*sqrt(2pi)) factor
+orbital_values_bd = [orbital_dist_bd(a)/(np.sqrt(2 * np.pi)*s_m*a) for a in a_values_m]
+orbital_values_pl = [orbital_dist_pl(a)/(np.sqrt(2 * np.pi)*sigma_pl_ln*a) for a in a_values_m]
+
+# Calculate orbital distribution integrals
+orbital_integral_bd = np.trapz(orbital_values_bd, a_values_m)
+orbital_integral_pl = np.trapz(orbital_values_pl, a_values_m)
+
+# Calculate frequency for Brown Dwarfs and Giant Planets
+f_bd = A_bd * orbital_integral_bd * mass_ratio_integral_bd
+f_pl = A_pl * orbital_integral_pl * mass_ratio_integral_gp
 
 # Display results in Streamlit
 st.write(f"Mean Number of Planets Per Star:", f_pl)
