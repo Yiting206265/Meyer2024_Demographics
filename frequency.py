@@ -395,14 +395,14 @@ a_values = np.logspace(-2, 4, 500, base=10)
 bd_plot_values = []
 for a in a_values:
     # Calculate log-normal PDF in log10 space
-    bd_pdf = np.exp(-(np.log(a) - mu_m) ** 2 / (2 * s_m**2))/np.sqrt(2*np.pi)/s_m
+    bd_pdf = np.exp(-(np.log10(a) - mean_bd) ** 2 / (2 * sigma_bd**2))/np.sqrt(2*np.pi)/sigma_bd
     bd_plot_values.append(A_bd * bd_pdf)
 
 # For giant planets
 pl_plot_values = []
 for a in a_values:
     # Calculate log-normal PDF in log10 space
-    pl_pdf = np.exp(-(np.log(a) - mu_pl) ** 2 / (2 * sigma_pl**2))/np.sqrt(2*np.pi)/sigma_pl
+    pl_pdf = np.exp(-(np.log10(a) - mu_pl) ** 2 / (2 * sigma_pl**2))/np.sqrt(2*np.pi)/sigma_pl
     pl_plot_values.append(A_pl * pl_pdf)
 
 ax2.plot(a_values, bd_plot_values, linewidth=2, label='Brown Dwarf Model', color='r')
@@ -422,7 +422,7 @@ ax2.xaxis.set_major_formatter(FuncFormatter(log10_formatter))
 ax2.set_xscale('log')
 
 # Automatically set y-axis limits based on the data
-ax2.set_ylim(0, 0.07)
+ax2.set_ylim(0, 0.1)
 
 # Configure semi-major axis distribution plot
 ax2.set_xlabel('Semi-Major Axis (AU)', fontsize=20, labelpad=10.4)
