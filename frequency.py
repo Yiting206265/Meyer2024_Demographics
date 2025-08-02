@@ -527,8 +527,8 @@ mean_num_pl = np.trapz(pl_freq_for_integration, log_mass_ratio_values)
 mean_num_bd = np.trapz(bd_freq_for_integration, log_mass_ratio_values)
 
 # Display results in Streamlit
-st.write(f"Mean Number of Planets Per Star: mean_num_pl")
-st.write(f"Mean Number of Brown Dwarfs Per Star: mean_num_bd")
+st.write(f"Mean Number of Planets Per Star: {mean_num_pl}")
+st.write(f"Mean Number of Brown Dwarfs Per Star: {mean_num_bd}")
 
 st.write("")
 st.write("*Note: These values represent the expected number of companions per star within the specified mass ratio and orbital separation ranges.*")
