@@ -147,13 +147,13 @@ For the orbital separation distributions (log-normal):
 """)
 
 # Use st.latex for proper rendering of equations - with explicit log10 notation for planets
-st.latex(r"\phi_{pl}(x) = \frac{A_{pl} e^{-(x - \log_{10}(\mu_{pl}))^2/2 (\log_{10}(\sigma_{pl}))^2}}{\sqrt{2\pi}\log_{10}(\sigma_{pl})}")
+st.latex(r"\phi_{pl}(x) = \frac{A_{pl} e^{-(x - \mu_{pl})^2/2 \sigma_{pl}^2}}{x \sqrt{2\pi}\sigma_{pl}}")
 
 # Add the formula for brown dwarfs with explicit log10 notation
-st.latex(r"\phi_{bd}(x) = \frac{A_{bd} e^{-(x - \log_{10}(\mu_{bd}))^2/2 (\log_{10}(\sigma_{bd}))^2}}{\sqrt{2\pi}\log_{10}(\sigma_{bd})}")
+st.latex(r"\phi_{bd}(x) = \frac{A_{bd} e^{-(x - \mu_{bd})^2/2 \sigma_{bd}^2}}{x \sqrt{2\pi}\sigma_{bd}}")
 
 st.write(r"""
-where $x = \log_{10}(a)$ is the logarithm (base-10) of the semi-major axis in AU.
+where $x = \log_{10}(a)$ is the logarithm (base-10) of the semi-major axis in AU, and both $\mu_{pl}$ and $\mu_{bd}$ are in units of $\log_{10}(a)$.
 
 For brown dwarfs, we adopt log-normal distributions from the literature for different stellar types (M, FGK, A), with parameters shown in the table below.
 
@@ -191,8 +191,10 @@ st.markdown("<div class='section-header'>Host Star Parameters</div>", unsafe_all
 # Default values for sliders from user-provided values
 ln_A_bd_default = -1.407  # ln(A_bd)
 ln_A_pl_default = -4.720  # ln(A_p)
-alpha_bd_default = -0.292  # β
+alpha_bd_default = -0.292 # β
 alpha_gp_default = 1.296  # α
+mu_pl_default = 1.299     #ln(mu_p)
+sigma_pl_default = 0.215  #ln(sigma_p)
 
 # Radio button to select stellar type
 st_type = st.radio(
@@ -268,36 +270,34 @@ with col2:
         r'$\mathrm{log_{10}(\mu_{pl})}$',
         min_value=0.0,
         max_value=3.0,
-        value=1.299/ln10,
+        value=mu_pl_default/ln10,
         step=0.01
     )
     sigma_pl = st.slider(
         r'$\mathrm{log_{10}(\sigma_{pl})}$',
         min_value=0.0,
         max_value=3.0,
-        value=0.215/ln10,  # Default or static value
+        value=sigma_pl_default/ln10,  # Default or static value
         step=0.01
     )
 
-# Convert log10 parameters to natural log for calculations
-# These are the correct conversions from log10 to natural log
-sigma_bd_ln = sigma_bd * ln10  # Convert sigma from log10 to natural log
-mean_bd_ln = mean_bd * ln10    # Convert mean from log10 to natural log
+#All the variables are given in log10, so I am going to convert everything into natural log for calculation
 
-# Define orbital separation distributions for Brown Dwarfs and Giant Planets
-# These functions return the shape of the log-normal distribution in natural log space
-# without the normalization factor, which is added separately in the integration
+# Convert log10 parameters to natural log for calculations
+sigma_bd_ln = sigma_bd * ln10
+mean_bd_ln = mean_bd * ln10
+mu_pl_ln = mu_pl*ln10
+sigma_pl_ln = sigma_pl*ln10
+
 def orbital_dist_bd(a):
-    # This function returns the unnormalized log-normal distribution in natural log space
-    # mean_bd_ln and sigma_bd_ln are already converted from log10 to natural log
-    return np.exp(-(np.log(a) - mean_bd_ln) ** 2 / (2 * sigma_bd_ln**2))
+    # Log-normal distribution for orbital separation
+    mu_a_bd_ln = mean_bd_ln
+    return np.exp(-(np.log(a) - mu_a_bd_ln)**2 / (2 * sigma_bd_ln**2))
 
 def orbital_dist_pl(a):
-    # Convert log10 values to natural log correctly
-    # sigma_pl is in log10 units, so we need to multiply by ln(10) to convert to natural log
-    # mu_pl is already in log10 space, so we convert to natural log space with ln(10)
-    # This returns just the exponential part without normalization
-    return np.exp(-(np.log(a) - mu_pl*ln10) ** 2 / (2 * (sigma_pl*ln10)**2))
+    # Log-normal distribution for orbital separation
+    mu_a_gp_ln = mu_pl_ln
+    return np.exp(-(np.log(a) - mu_a_gp_ln)**2 / (2 * sigma_pl_ln**2))
 
 ##############################################################################
 #Section 4 - Companion Parameters
@@ -321,15 +321,17 @@ with col_mass1:
 with col_mass2:
     Jup_max = st.number_input(
         "Maximum Companion Mass ($\mathrm{M_{Jup}}$)",
-        value=100.0,
+        min_value=0.03,
+        max_value=85.0,
+        value=85.0,
         step=0.1,
         format="%.2f"
     )
 
 # Add validation
 if Jup_min >= Jup_max:
-    st.error("Minimum companion mass must be less than maximum companion mass.")
-    Jup_min = min(Jup_min, Jup_max - 0.01)
+    st.error("Error: Minimum companion mass must be less than the maximum companion mass.")
+    st.stop()
 
 # Mass ratio calculations
 q_Jupiter = 0.001/host_mass
@@ -376,69 +378,120 @@ if a_min >= a_max:
     st.error("Minimum orbital separation must be less than maximum orbital separation.")
     a_min = min(a_min, a_max - 0.01)
 
-# Create a single plot for the frequency distribution vs mass ratio
-fig, ax = plt.subplots(figsize=(12, 8))
+# Create a fresh figure for the plot
+plt.close('all')  # Close any existing figures
+fig, ax = plt.subplots(figsize=(10, 8))
 
 # Create mass ratio values for plotting with fixed range from 10^-3 to 1
 # Calculate mass ratio range based on companion mass inputs
 min_q = max(Jup_min * q_Jupiter, 1e-3)  # Ensure minimum is at least 10^-3
 max_q = min(Jup_max * q_Jupiter, 1.0)    # Ensure maximum is at most 1.0
 
-# Create logarithmically spaced mass ratio values within the calculated range
-q_values = np.logspace(np.log10(min_q), np.log10(max_q), 100)
+# Define the range for orbital distances and mass ratios using correct log_10 ranges
+# Use logarithmic spacing for mass ratio to better sample the distribution
+mass_ratio_values = np.logspace(
+    np.log10(max(Jup_min * q_Jupiter, 1e-3)),  # Ensure minimum is at least 10^-3
+    np.log10(min(Jup_max * q_Jupiter, 1.0)),   # Ensure maximum is at most 1.0
+    1000
+)
 
-# Calculate the joint distribution df/(dq dloga) for each mass ratio
-bd_joint_freq = []
-pl_joint_freq = []
-total_joint_freq = []
 
-# For each mass ratio, calculate the joint distribution at a representative separation
-# We'll use the mean of the log separation range as a representative value
-log_a_mean = (np.log10(max(a_min, 0.01)) + np.log10(a_max)) / 2
-a_mean = 10**log_a_mean
 
-for q in q_values:
-    # Brown dwarf joint distribution at this mass ratio
-    # Calculate log-normal PDF in natural log space for orbital distribution
-    # The normalization factor for a log-normal distribution in natural log space is 1/(sqrt(2π)×σ×a)
-    bd_pdf_a = orbital_dist_bd(a_mean) / (np.sqrt(2*np.pi) * sigma_bd_ln * a_mean)
-    
-    # Calculate power-law for mass ratio
-    bd_pdf_q = q ** -alpha_bd
-    
-    # Combine to get joint distribution df/(dq dloga)
-    bd_joint = A_bd * bd_pdf_a * bd_pdf_q
-    bd_joint_freq.append(bd_joint)
-    
-    # Giant planet joint distribution at this mass ratio
-    # Calculate log-normal PDF in natural log space
-    # The normalization factor for a log-normal distribution in natural log space is 1/(sqrt(2π)×σ×a)
-    sigma_pl_ln = sigma_pl * ln10  # Convert sigma from log10 to natural log
-    mu_pl_ln = mu_pl * ln10       # Convert mu from log10 to natural log
-    pl_pdf_a = np.exp(-(np.log(a_mean) - mu_pl_ln)**2 / (2 * sigma_pl_ln**2)) / (np.sqrt(2*np.pi) * sigma_pl_ln * a_mean)
-    
-    # Calculate power-law for mass ratio
-    pl_pdf_q = q ** -alpha_gp
-    
-    # Combine to get joint distribution df/(dq dloga)
-    pl_joint = A_pl * pl_pdf_a * pl_pdf_q
-    pl_joint_freq.append(pl_joint)
-    
-    # Total joint frequency
-    total_joint_freq.append(bd_joint + pl_joint)
+# Define functions for mass ratio and orbital separation distributions
+def mass_fctn_bd(q):
+    # Brown dwarf slope should be rising (positive exponent), so flip sign of alpha_bd
+    return q ** (-1 * alpha_bd)
 
-# Plot the joint frequency distribution df/(dq dloga) vs mass ratio
-ax.plot(q_values, bd_joint_freq, color='r', linewidth=2, label='Brown Dwarf Model')
-ax.plot(q_values, pl_joint_freq, color='blue', linewidth=2, label='Giant Planet Model')
-ax.plot(q_values, total_joint_freq, color='orange', linewidth=2, label='Total Frequency')
+def mass_fctn_pl(q):
+    # Planet slope is negative
+    return q ** (-1 * alpha_gp)
 
-# Set axes to log scale
-ax.set_xscale('log')
-ax.set_yscale('log')
+def surface_den_bd(a):
+    return orbital_dist_bd(a) / (np.sqrt(2*np.pi) * sigma_bd_ln * a)
+
+def surface_den_pl(a):
+    return orbital_dist_pl(a) / (np.sqrt(2*np.pi) * sigma_pl_ln * a)
+
+# Function to calculate dN/dlogq by integrating over separation range
+def dN_bd(q):
+    # Integrate the orbital distribution over the separation range and multiply by mass function
+    # Use fixed integration limits for consistency
+    orbital_integral = integrate.quad(surface_den_bd, max(a_min, 0.01), a_max)[0]
+    return A_bd * mass_fctn_bd(q) * orbital_integral
+
+def dN_pl(q):
+    # Integrate the orbital distribution over the separation range and multiply by mass function
+    # Use fixed integration limits for consistency
+    orbital_integral = integrate.quad(surface_den_pl, max(a_min, 0.01), a_max)[0]
+    return A_pl * mass_fctn_pl(q) * orbital_integral
+
+# Pre-calculate orbital integrals (these are constant for all q values)
+bd_orbital_integral = integrate.quad(surface_den_bd, max(a_min, 0.01), a_max)[0]
+pl_orbital_integral = integrate.quad(surface_den_pl, max(a_min, 0.01), a_max)[0]
+
+# Define specific mass ratio ranges for plotting caps from sliders
+# Planets (red curve) are at lower mass, Brown Dwarfs (blue curve) are at higher mass
+q_pl_min = Jup_min * q_Jupiter
+q_pl_max = 0.1  # This remains fixed as per user's model definition
+q_bd_min = 3 * q_Jupiter # This remains fixed as per user's model definition
+q_bd_max = Jup_max * q_Jupiter
+
+# Define specific mass ratio ranges for each population
+q_pl_min = 3 * q_Jupiter
+q_pl_max = 85 * q_Jupiter
+q_bd_min = 0.03 * q_Jupiter
+q_bd_max = 0.1
+
+bd_freq = []
+pl_freq = []
+total_freq = []
+
+for q in mass_ratio_values:
+    # Get the direct mass function values
+    bd_mass = mass_fctn_bd(q)
+    pl_mass = mass_fctn_pl(q)
+
+    # Calculate dN/dlog(q) using the direct mass function, applying caps
+    # dN/dlog(q) = A * mass_fctn(q) * orbital_integral * q * ln(10)
+    bd_val = A_bd * bd_mass * bd_orbital_integral * q * np.log(10) if q_bd_min <= q <= q_bd_max else 0
+    pl_val = A_pl * pl_mass * pl_orbital_integral * q * np.log(10) if q_pl_min <= q <= q_pl_max else 0
+    
+    # Append to arrays
+    bd_freq.append(bd_val)
+    pl_freq.append(pl_val)
+    total_freq.append(bd_val + pl_val)
+
+# Convert lists to numpy arrays for plotting
+bd_freq_array = np.array(bd_freq)
+pl_freq_array = np.array(pl_freq)
+total_freq_array = np.array(total_freq)
+
+# Replace zeros with NaN for cleaner plotting (to avoid vertical lines)
+bd_freq_array[bd_freq_array == 0] = np.nan
+pl_freq_array[pl_freq_array == 0] = np.nan
+total_freq_array[mass_ratio_values < q_pl_min] = np.nan
+# Cap total curve to start and end with the planet model's domain
+total_freq_array[mass_ratio_values > q_pl_max] = np.nan
+
+# Plot the frequency distribution dN/dlogq vs log(q)
+log_mass_ratio_values = np.log10(mass_ratio_values)
+ax.plot(log_mass_ratio_values, pl_freq_array, color='r', linewidth=2, label='Giant Planet Model')
+ax.plot(log_mass_ratio_values, bd_freq_array, color='blue', linewidth=2, label='Brown Dwarf Model')
+ax.plot(log_mass_ratio_values, total_freq_array, color='orange', linewidth=2, label='Total Frequency')
 
 # Configure plot
-ax.set_xlabel('Mass Ratio q', fontsize=20, labelpad=10.4)
-ax.set_ylabel('df/(dq dloga)', fontsize=20, labelpad=10.4)
+ax.set_xlabel('log(q)', fontsize=20, labelpad=10.4)
+ax.set_ylabel('dN / dlog(q)', fontsize=20, labelpad=10.4)
+ax.set_xlim(-4, -0.5)
+# Dynamically adjust y-axis limit
+try:
+    # Find the maximum value of the visible total frequency curve
+    max_y = np.nanmax(total_freq_array)
+    # Set the y-axis limit to be slightly above the max value for better visualization
+    ax.set_ylim(0, max_y * 1.1)
+except ValueError:
+    # Default limit if the array is all NaN
+    ax.set_ylim(0, 0.3)
 ax.tick_params(axis='both', which='major', labelsize=15)
 ax.legend(loc='upper right', fontsize=14)
 ax.set_title("Companion Frequency Distribution", fontsize=22)
@@ -456,37 +509,26 @@ mass_ratio_max = Jup_max * q_Jupiter
 # Display the plot
 st.pyplot(fig)
 
-# Define the range for orbital distances and mass ratios using correct log_10 ranges
-# Use logarithmic spacing for mass ratio to better sample the distribution
-mass_ratio_values = np.logspace(
-    np.log10(max(Jup_min * q_Jupiter, 1e-3)),  # Ensure minimum is at least 10^-3
-    np.log10(min(Jup_max * q_Jupiter, 1.0)),   # Ensure maximum is at most 1.0
-    1000
-)
 
-# Use logarithmic spacing for orbital separation to better sample the distribution
-a_values_m = np.logspace(np.log10(max(a_min, 0.01)), np.log10(a_max), 1000)
 
-# Calculate mass ratio distribution integrals
-mass_ratio_integral_bd = np.trapz([d_q_i ** -alpha_bd for d_q_i in mass_ratio_values], mass_ratio_values)
-mass_ratio_integral_gp = np.trapz([d_q_i ** -alpha_gp for d_q_i in mass_ratio_values], mass_ratio_values)
+# Calculate the mean number of companions by integrating the final frequency distributions
+# We integrate dN/dlog(q) over dlog(q) to get the total number N.
 
-# For orbital distributions, we need to properly normalize by the PDF
-# The normalization factor for a log-normal distribution in natural log space is 1/(sqrt(2π)×σ×a)
-orbital_values_bd = [orbital_dist_bd(a)/(np.sqrt(2 * np.pi)*sigma_bd_ln*a) for a in a_values_m]
-orbital_values_pl = [orbital_dist_pl(a)/(np.sqrt(2 * np.pi)*(sigma_pl*ln10)*a) for a in a_values_m]
+# Create copies of the frequency arrays to avoid modifying the data used for plotting
+pl_freq_for_integration = np.copy(pl_freq_array)
+bd_freq_for_integration = np.copy(bd_freq_array)
 
-# Calculate orbital distribution integrals
-orbital_integral_bd = np.trapz(orbital_values_bd, a_values_m)
-orbital_integral_pl = np.trapz(orbital_values_pl, a_values_m)
+# Replace NaNs with 0 for the integration
+pl_freq_for_integration[np.isnan(pl_freq_for_integration)] = 0
+bd_freq_for_integration[np.isnan(bd_freq_for_integration)] = 0
 
-# Calculate frequency for Brown Dwarfs and Giant Planets
-f_bd = A_bd * orbital_integral_bd * mass_ratio_integral_bd
-f_pl = A_pl * orbital_integral_pl * mass_ratio_integral_gp
+# Integrate dN/dlog(q) over log(q) using the trapezoidal rule
+mean_num_pl = np.trapz(pl_freq_for_integration, log_mass_ratio_values)
+mean_num_bd = np.trapz(bd_freq_for_integration, log_mass_ratio_values)
 
 # Display results in Streamlit
-st.write(f"Mean Number of Planets Per Star:", f_pl)
-st.write(f"Mean Number of Brown Dwarfs Per Star:", f_bd)
+st.write(f"Mean Number of Planets Per Star: mean_num_pl")
+st.write(f"Mean Number of Brown Dwarfs Per Star: mean_num_bd")
 
 st.write("")
 st.write("*Note: These values represent the expected number of companions per star within the specified mass ratio and orbital separation ranges.*")
