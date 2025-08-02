@@ -147,10 +147,10 @@ For the orbital separation distributions (log-normal):
 """)
 
 # Use st.latex for proper rendering of equations - with explicit log10 notation for planets
-st.latex(r"\phi_{pl}(x) = \frac{A_{pl} e^{-(x - \mu_{pl})^2/2 \sigma_{pl}^2}}{x \sqrt{2\pi}\sigma_{pl}}")
+st.latex(r"\phi_{pl}(x) = \frac{A_{pl} e^{-(x - \mu_{pl})^2/2 \sigma_{pl}^2}}{x \sqrt{2\pi}\sigma_{pl} \ln(10)}")
 
 # Add the formula for brown dwarfs with explicit log10 notation
-st.latex(r"\phi_{bd}(x) = \frac{A_{bd} e^{-(x - \mu_{bd})^2/2 \sigma_{bd}^2}}{x \sqrt{2\pi}\sigma_{bd}}")
+st.latex(r"\phi_{bd}(x) = \frac{A_{bd} e^{-(x - \mu_{bd})^2/2 \sigma_{bd}^2}}{x \sqrt{2\pi}\sigma_{bd} \ln(10)}")
 
 st.write(r"""
 where $x = \log_{10}(a)$ is the logarithm (base-10) of the semi-major axis in AU, and both $\mu_{pl}$ and $\mu_{bd}$ are in units of $\log_{10}(a)$.
@@ -194,7 +194,7 @@ ln_A_pl_default = -4.720  # ln(A_p)
 alpha_bd_default = -0.292 # β
 alpha_gp_default = 1.296  # α
 mu_pl_default = 1.299     #ln(mu_p)
-sigma_pl_default = 0.215  #ln(sigma_p)
+sigma_pl_default = np.exp(0.215)  #ln(sigma_p)
 
 # Radio button to select stellar type
 st_type = st.radio(
@@ -241,9 +241,9 @@ ln10 = np.log(10)
 
 # Brown Dwarf parameters in col1
 with col1:
-    alpha_bd = st.slider(r'$\mathrm{\beta}$', min_value=-2.0, max_value=2.0, value=alpha_bd_default, step=0.01)
+    alpha_bd = st.slider(r'$\mathrm{\beta}$', min_value=-3.0, max_value=3.0, value=alpha_bd_default, step=0.01)
     # Convert ln(A_bd) to A_bd for display, with appropriate range and step size
-    A_bd = st.slider(r'$\mathrm{A_{bd}}$', min_value=0.0001, max_value=1.0, value=np.exp(ln_A_bd_default), step=0.0001, format="%.4f")
+    A_bd = st.slider(r'$\mathrm{A_{bd}}$', min_value=0.0001, max_value=1.0, value=np.exp(ln_A_bd_default)/ln10, step=0.0001, format="%.4f")
     mean_bd = st.slider(
         r'$\mathrm{log_{10}(\mu_{bd})}$',
         min_value=0.0,
@@ -263,9 +263,9 @@ with col1:
 
 # Giant Planet parameters in col2
 with col2:
-    alpha_gp = st.slider(r'$\mathrm{\alpha}$', min_value=-2.0, max_value=2.0, value=alpha_gp_default, step=0.01)
+    alpha_gp = st.slider(r'$\mathrm{\alpha}$', min_value=-3.0, max_value=3.0, value=alpha_gp_default, step=0.01)
     # Convert ln(A_pl) to A_pl for display
-    A_pl = st.slider(r'$\mathrm{A_{pl}}$', min_value=0.0001, max_value=0.1, value=np.exp(ln_A_pl_default), step=0.0001, format="%.4f")
+    A_pl = st.slider(r'$\mathrm{A_{pl}}$', min_value=0.0001, max_value=0.1, value=np.exp(ln_A_pl_default)/ln10, step=0.0001, format="%.4f")
     mu_pl = st.slider(
         r'$\mathrm{log_{10}(\mu_{pl})}$',
         min_value=0.0,
@@ -281,23 +281,22 @@ with col2:
         step=0.01
     )
 
-#All the variables are given in log10, so I am going to convert everything into natural log for calculation
+#All the variables are given in log10, so I am going to use log10 for calculations directly
 
-# Convert log10 parameters to natural log for calculations
-sigma_bd_ln = sigma_bd * ln10
-mean_bd_ln = mean_bd * ln10
-mu_pl_ln = mu_pl*ln10
-sigma_pl_ln = sigma_pl*ln10
+# Use log10 parameters directly for calculations (no conversion needed)
+# sigma_bd, mean_bd, mu_pl, sigma_pl are already in log10 units
 
-def orbital_dist_bd(a):
-    # Log-normal distribution for orbital separation
-    mu_a_bd_ln = mean_bd_ln
-    return np.exp(-(np.log(a) - mu_a_bd_ln)**2 / (2 * sigma_bd_ln**2))
+# Exact notebook surface density functions (not separated into orbital_dist)
+def surface_den_bd_exact(a):
+    # Exact notebook formula for brown dwarf surface density
+    a_c_bd = 10**mean_bd  # Convert log10 back to linear for a_c_bd
+    return (A_bd*(np.exp(-(np.log10(a)-np.log10(a_c_bd))**2.0/(2*sigma_bd**2.0))/(a*np.sqrt(2.)*np.sqrt(np.pi)*sigma_bd)))
 
-def orbital_dist_pl(a):
-    # Log-normal distribution for orbital separation
-    mu_a_gp_ln = mu_pl_ln
-    return np.exp(-(np.log(a) - mu_a_gp_ln)**2 / (2 * sigma_pl_ln**2))
+def surface_den_pl_exact(a):
+    # Exact notebook formula for planet surface density
+    mu_linear = mu_pl  # mu is already in log10 units from slider
+    sigma_linear = sigma_pl  # sigma is already in log10 units from slider
+    return (A_pl*(np.exp(-(np.log10(a)-mu_linear)**2./(2.*sigma_linear**2.))/(a*np.sqrt(2.)*np.sqrt(np.pi)*sigma_linear)))
 
 ##############################################################################
 #Section 4 - Companion Parameters
@@ -395,35 +394,35 @@ mass_ratio_values = np.logspace(
     1000
 )
 
-
-
 # Define functions for mass ratio and orbital separation distributions
 def mass_fctn_bd(q):
-    # Brown dwarf slope should be rising (positive exponent), so flip sign of alpha_bd
-    return q ** (-1 * alpha_bd)
+    # Exact notebook: q^(-beta) where beta = alpha_bd from slider
+    return q ** (-alpha_bd)
 
 def mass_fctn_pl(q):
-    # Planet slope is negative
-    return q ** (-1 * alpha_gp)
+    # Exact notebook: q^(-alpha_pl) where alpha_pl = alpha_gp from slider
+    return q ** (-alpha_gp)
 
 def surface_den_bd(a):
-    return orbital_dist_bd(a) / (np.sqrt(2*np.pi) * sigma_bd_ln * a)
+    # Use exact notebook implementation
+    return surface_den_bd_exact(a)
 
 def surface_den_pl(a):
-    return orbital_dist_pl(a) / (np.sqrt(2*np.pi) * sigma_pl_ln * a)
+    # Use exact notebook implementation
+    return surface_den_pl_exact(a) 
 
 # Function to calculate dN/dlogq by integrating over separation range
 def dN_bd(q):
-    # Integrate the orbital distribution over the separation range and multiply by mass function
-    # Use fixed integration limits for consistency
+    # Integrate the surface density over the separation range and multiply by mass function
+    # Surface density already includes A_bd normalization
     orbital_integral = integrate.quad(surface_den_bd, max(a_min, 0.01), a_max)[0]
-    return A_bd * mass_fctn_bd(q) * orbital_integral
+    return mass_fctn_bd(q) * orbital_integral
 
 def dN_pl(q):
-    # Integrate the orbital distribution over the separation range and multiply by mass function
-    # Use fixed integration limits for consistency
+    # Integrate the surface density over the separation range and multiply by mass function
+    # Surface density already includes A_pl normalization
     orbital_integral = integrate.quad(surface_den_pl, max(a_min, 0.01), a_max)[0]
-    return A_pl * mass_fctn_pl(q) * orbital_integral
+    return mass_fctn_pl(q) * orbital_integral
 
 # Pre-calculate orbital integrals (these are constant for all q values)
 bd_orbital_integral = integrate.quad(surface_den_bd, max(a_min, 0.01), a_max)[0]
@@ -442,19 +441,19 @@ q_pl_max = 85 * q_Jupiter
 q_bd_min = 0.03 * q_Jupiter
 q_bd_max = 0.1
 
+
+
+
+
 bd_freq = []
 pl_freq = []
 total_freq = []
 
 for q in mass_ratio_values:
-    # Get the direct mass function values
-    bd_mass = mass_fctn_bd(q)
-    pl_mass = mass_fctn_pl(q)
-
-    # Calculate dN/dlog(q) using the direct mass function, applying caps
-    # dN/dlog(q) = A * mass_fctn(q) * orbital_integral * q * ln(10)
-    bd_val = A_bd * bd_mass * bd_orbital_integral * q * np.log(10) if q_bd_min <= q <= q_bd_max else 0
-    pl_val = A_pl * pl_mass * pl_orbital_integral * q * np.log(10) if q_pl_min <= q <= q_pl_max else 0
+    # Calculate dN/dlog(q) using the corrected dN functions, applying caps
+    # The dN functions now include proper normalization and mass functions
+    bd_val = dN_bd(q) * q * np.log(10) if q_bd_min <= q <= q_bd_max else 0
+    pl_val = dN_pl(q) * q * np.log(10) if q_pl_min <= q <= q_pl_max else 0
     
     # Append to arrays
     bd_freq.append(bd_val)
@@ -505,26 +504,29 @@ mass_ratio_max = Jup_max * q_Jupiter
 # ax.axvline(x=mass_ratio_max, color='purple', linestyle='--', label=f'Max Mass Ratio')
 # ax.axvspan(mass_ratio_min, mass_ratio_max, color='gray', alpha=0.1)
 
-
 # Display the plot
 st.pyplot(fig)
 
+# Calculate the mean number of companions using direct integration (same as debug)
+# This matches the notebook calculation exactly
 
+# Use the same ranges and method as the debug calculation
+M_J_calc = 1./1000.
+Jmin_calc = 1.0
+Jmax_calc = 85.0
+qmin_calc = (Jmin_calc*M_J_calc)/host_mass
+qmax_calc = (Jmax_calc*M_J_calc)/host_mass
+amin_calc = 1.0
+amax_calc = 100.0
 
-# Calculate the mean number of companions by integrating the final frequency distributions
-# We integrate dN/dlog(q) over dlog(q) to get the total number N.
+# Direct integration (same as notebook)
+mass_integral_pl = integrate.quad(mass_fctn_pl, qmin_calc, qmax_calc)[0]
+surf_integral_pl = integrate.quad(surface_den_pl, amin_calc, amax_calc)[0]
+mean_num_pl = mass_integral_pl * surf_integral_pl
 
-# Create copies of the frequency arrays to avoid modifying the data used for plotting
-pl_freq_for_integration = np.copy(pl_freq_array)
-bd_freq_for_integration = np.copy(bd_freq_array)
-
-# Replace NaNs with 0 for the integration
-pl_freq_for_integration[np.isnan(pl_freq_for_integration)] = 0
-bd_freq_for_integration[np.isnan(bd_freq_for_integration)] = 0
-
-# Integrate dN/dlog(q) over log(q) using the trapezoidal rule
-mean_num_pl = np.trapz(pl_freq_for_integration, log_mass_ratio_values)
-mean_num_bd = np.trapz(bd_freq_for_integration, log_mass_ratio_values)
+mass_integral_bd = integrate.quad(mass_fctn_bd, qmin_calc, qmax_calc)[0]
+surf_integral_bd = integrate.quad(surface_den_bd, amin_calc, amax_calc)[0]
+mean_num_bd = mass_integral_bd * surf_integral_bd
 
 # Display results in Streamlit
 st.write(f"Mean Number of Planets Per Star: {mean_num_pl}")
