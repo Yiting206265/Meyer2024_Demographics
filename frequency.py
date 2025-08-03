@@ -321,7 +321,7 @@ with col_mass2:
     Jup_max = st.number_input(
         "Maximum Companion Mass ($\mathrm{M_{Jup}}$)",
         min_value=0.03,
-        max_value=85.0,
+        max_value=4000.0,
         value=85.0,
         step=0.1,
         format="%.2f"
@@ -352,30 +352,6 @@ combined_values = a2_bd_extended + a2_gp_extended
 ##############################################################################
 #Section 5 - Orbital Separation Range
 ##############################################################################
-
-# User input for orbital separations using number inputs
-col_sep1, col_sep2 = st.columns(2)
-
-with col_sep1:
-    a_min = st.number_input(
-        "Minimum Orbital Separation (AU)",
-        value=1.0,
-        step=0.1,
-        format="%.2f"
-    )
-
-with col_sep2:
-    a_max = st.number_input(
-        "Maximum Orbital Separation (AU)",
-        value=100.0,
-        step=0.1,
-        format="%.2f"
-    )
-
-# Add validation
-if a_min >= a_max:
-    st.error("Minimum orbital separation must be less than maximum orbital separation.")
-    a_min = min(a_min, a_max - 0.01)
 
 # Create a fresh figure for the plot
 plt.close('all')  # Close any existing figures
@@ -415,18 +391,101 @@ def surface_den_pl(a):
 def dN_bd(q):
     # Integrate the surface density over the separation range and multiply by mass function
     # Surface density already includes A_bd normalization
-    orbital_integral = integrate.quad(surface_den_bd, max(a_min, 0.01), a_max)[0]
+    orbital_integral = integrate.quad(surface_den_bd, max(amin_calc, 0.01), amax_calc)[0]
     return mass_fctn_bd(q) * orbital_integral
 
 def dN_pl(q):
     # Integrate the surface density over the separation range and multiply by mass function
     # Surface density already includes A_pl normalization
-    orbital_integral = integrate.quad(surface_den_pl, max(a_min, 0.01), a_max)[0]
+    orbital_integral = integrate.quad(surface_den_pl, max(amin_calc, 0.01), amax_calc)[0]
     return mass_fctn_pl(q) * orbital_integral
 
-# Pre-calculate orbital integrals (these are constant for all q values)
-bd_orbital_integral = integrate.quad(surface_den_bd, max(a_min, 0.01), a_max)[0]
-pl_orbital_integral = integrate.quad(surface_den_pl, max(a_min, 0.01), a_max)[0]
+# Note: Orbital integrals will be calculated after amin_calc and amax_calc are defined
+
+# Plotting section moved to after orbital separation inputs are defined
+# This avoids the NameError with amin_calc and amax_calc
+
+##############################################################################
+# Section 6 - Orbital Separation Range for Frequency Calculations
+##############################################################################
+
+
+
+# Create columns for orbital separation inputs only
+col1, col2 = st.columns(2)
+
+with col1:
+    amin_calc = st.number_input(
+        'Minimum Separation (AU)',
+        min_value=0.1,
+        max_value=1000.0,
+        value=1.0,
+        step=0.1,
+        help="Minimum orbital separation in AU"
+    )
+
+with col2:
+    amax_calc = st.number_input(
+        'Maximum Separation (AU)',
+        min_value=0.1,
+        max_value=1000.0,
+        value=100.0,
+        step=0.1,
+        help="Maximum orbital separation in AU"
+    )
+
+# Validate orbital separation range
+if amin_calc >= amax_calc:
+    st.error("⚠️ Minimum separation must be less than maximum separation!")
+
+# Define frequency calculation functions that accept user-defined parameters
+def f_pl(mass_min_mj, mass_max_mj, sep_min_au, sep_max_au, host_mass_msun):
+    """
+    Calculate the mean number of giant planets per star.
+    
+    Parameters:
+    - mass_min_mj: Minimum companion mass in Jupiter masses
+    - mass_max_mj: Maximum companion mass in Jupiter masses  
+    - sep_min_au: Minimum orbital separation in AU
+    - sep_max_au: Maximum orbital separation in AU
+    - host_mass_msun: Host star mass in solar masses
+    
+    Returns:
+    - Mean number of giant planets per star
+    """
+    M_J = 1./1000.  # Jupiter mass ratio
+    qmin = (mass_min_mj * M_J) / host_mass_msun
+    qmax = (mass_max_mj * M_J) / host_mass_msun
+    
+    mass_integral = integrate.quad(mass_fctn_pl, qmin, qmax)[0]
+    surf_integral = integrate.quad(surface_den_pl, sep_min_au, sep_max_au)[0]
+    return mass_integral * surf_integral
+
+def f_bd(mass_min_mj, mass_max_mj, sep_min_au, sep_max_au, host_mass_msun):
+    """
+    Calculate the mean number of brown dwarfs per star.
+    
+    Parameters:
+    - mass_min_mj: Minimum companion mass in Jupiter masses
+    - mass_max_mj: Maximum companion mass in Jupiter masses
+    - sep_min_au: Minimum orbital separation in AU
+    - sep_max_au: Maximum orbital separation in AU
+    - host_mass_msun: Host star mass in solar masses
+    
+    Returns:
+    - Mean number of brown dwarfs per star
+    """
+    M_J = 1./1000.  # Jupiter mass ratio
+    qmin = (mass_min_mj * M_J) / host_mass_msun
+    qmax = (mass_max_mj * M_J) / host_mass_msun
+    
+    mass_integral = integrate.quad(mass_fctn_bd, qmin, qmax)[0]
+    surf_integral = integrate.quad(surface_den_bd, sep_min_au, sep_max_au)[0]
+    return mass_integral * surf_integral
+
+##############################################################################
+# Section 5 - Plotting Section (moved here after orbital separation inputs)
+##############################################################################
 
 # Define specific mass ratio ranges for plotting caps from sliders
 # Planets (red curve) are at lower mass, Brown Dwarfs (blue curve) are at higher mass
@@ -436,14 +495,10 @@ q_bd_min = 3 * q_Jupiter # This remains fixed as per user's model definition
 q_bd_max = Jup_max * q_Jupiter
 
 # Define specific mass ratio ranges for each population
-q_pl_min = 3 * q_Jupiter
+q_pl_min = 0.03 * q_Jupiter  # Planets: lower mass, lower limit
 q_pl_max = 85 * q_Jupiter
-q_bd_min = 0.03 * q_Jupiter
+q_bd_min = 3 * q_Jupiter     # Brown dwarfs: higher mass, higher limit
 q_bd_max = 0.1
-
-
-
-
 
 bd_freq = []
 pl_freq = []
@@ -481,7 +536,26 @@ ax.plot(log_mass_ratio_values, total_freq_array, color='orange', linewidth=2, la
 # Configure plot
 ax.set_xlabel('log(q)', fontsize=20, labelpad=10.4)
 ax.set_ylabel('dN / dlog(q)', fontsize=20, labelpad=10.4)
-ax.set_xlim(-4, -0.5)
+
+# Dynamically adjust x-axis limit based on actual data range
+try:
+    # Find the range where we have actual data (non-NaN values)
+    valid_data_mask = ~np.isnan(total_freq_array)
+    if np.any(valid_data_mask):
+        # Get the x-range where we have valid data
+        valid_x_values = log_mass_ratio_values[valid_data_mask]
+        x_min = np.min(valid_x_values)
+        x_max = np.max(valid_x_values)
+        # Add some padding (10% on each side) for better visualization
+        x_range = x_max - x_min
+        padding = x_range * 0.1
+        ax.set_xlim(x_min - padding, x_max + padding)
+    else:
+        # Fallback to default range if no valid data
+        ax.set_xlim(-4, -0.5)
+except (ValueError, IndexError):
+    # Fallback to default range if there's an error
+    ax.set_xlim(-4, -0.5)
 # Dynamically adjust y-axis limit
 try:
     # Find the maximum value of the visible total frequency curve
@@ -507,26 +581,14 @@ mass_ratio_max = Jup_max * q_Jupiter
 # Display the plot
 st.pyplot(fig)
 
-# Calculate the mean number of companions using direct integration (same as debug)
-# This matches the notebook calculation exactly
+##############################################################################
+# Section 7 - Frequency Calculations
+##############################################################################
 
-# Use the same ranges and method as the debug calculation
-M_J_calc = 1./1000.
-Jmin_calc = 1.0
-Jmax_calc = 85.0
-qmin_calc = (Jmin_calc*M_J_calc)/host_mass
-qmax_calc = (Jmax_calc*M_J_calc)/host_mass
-amin_calc = 1.0
-amax_calc = 100.0
-
-# Direct integration (same as notebook)
-mass_integral_pl = integrate.quad(mass_fctn_pl, qmin_calc, qmax_calc)[0]
-surf_integral_pl = integrate.quad(surface_den_pl, amin_calc, amax_calc)[0]
-mean_num_pl = mass_integral_pl * surf_integral_pl
-
-mass_integral_bd = integrate.quad(mass_fctn_bd, qmin_calc, qmax_calc)[0]
-surf_integral_bd = integrate.quad(surface_den_bd, amin_calc, amax_calc)[0]
-mean_num_bd = mass_integral_bd * surf_integral_bd
+# Calculate frequencies using the new functions with user-defined parameters
+# Use existing Jup_min/Jup_max from Companion Parameters section
+mean_num_pl = f_pl(Jup_min, Jup_max, amin_calc, amax_calc, host_mass)
+mean_num_bd = f_bd(Jup_min, Jup_max, amin_calc, amax_calc, host_mass)
 
 # Display results in Streamlit
 st.write(f"Mean Number of Planets Per Star: {mean_num_pl}")
