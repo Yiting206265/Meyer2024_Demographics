@@ -359,13 +359,13 @@ fig, ax = plt.subplots(figsize=(10, 8))
 
 # Create mass ratio values for plotting with fixed range from 10^-3 to 1
 # Calculate mass ratio range based on companion mass inputs
-min_q = max(Jup_min * q_Jupiter, 1e-3)  # Ensure minimum is at least 10^-3
+min_q = max(Jup_min * q_Jupiter, 1e-5)  # Ensure minimum is at least 10^-3
 max_q = min(Jup_max * q_Jupiter, 1.0)    # Ensure maximum is at most 1.0
 
 # Define the range for orbital distances and mass ratios using correct log_10 ranges
 # Use logarithmic spacing for mass ratio to better sample the distribution
 mass_ratio_values = np.logspace(
-    np.log10(max(Jup_min * q_Jupiter, 1e-3)),  # Ensure minimum is at least 10^-3
+    np.log10(max(Jup_min * q_Jupiter, 1e-5)),  # Ensure minimum is at least 10^-3
     np.log10(min(Jup_max * q_Jupiter, 1.0)),   # Ensure maximum is at most 1.0
     1000
 )
@@ -487,18 +487,11 @@ def f_bd(mass_min_mj, mass_max_mj, sep_min_au, sep_max_au, host_mass_msun):
 # Section 5 - Plotting Section (moved here after orbital separation inputs)
 ##############################################################################
 
-# Define specific mass ratio ranges for plotting caps from sliders
-# Planets (red curve) are at lower mass, Brown Dwarfs (blue curve) are at higher mass
-q_pl_min = Jup_min * q_Jupiter
-q_pl_max = 0.1  # This remains fixed as per user's model definition
-q_bd_min = 3 * q_Jupiter # This remains fixed as per user's model definition
-q_bd_max = Jup_max * q_Jupiter
-
 # Define specific mass ratio ranges for each population
 q_pl_min = 0.03 * q_Jupiter  # Planets: lower mass, lower limit
-q_pl_max = 85 * q_Jupiter
-q_bd_min = 3 * q_Jupiter     # Brown dwarfs: higher mass, higher limit
-q_bd_max = 0.1
+q_pl_max = 0.1
+q_bd_min = 0.03 * q_Jupiter     # Brown dwarfs: higher mass, higher limit
+q_bd_max = 1
 
 bd_freq = []
 pl_freq = []
