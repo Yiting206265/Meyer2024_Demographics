@@ -489,8 +489,8 @@ def f_bd(mass_min_mj, mass_max_mj, sep_min_au, sep_max_au, host_mass_msun):
 
 # Define specific mass ratio ranges for each population
 q_pl_min = 0.03 * q_Jupiter  # Planets: lower mass, lower limit
-q_pl_max = 0.1
-q_bd_min = 0.03 * q_Jupiter     # Brown dwarfs: higher mass, higher limit
+q_pl_max = 1
+q_bd_min = 0.03 * q_Jupiter
 q_bd_max = 1
 
 bd_freq = []
@@ -513,12 +513,12 @@ bd_freq_array = np.array(bd_freq)
 pl_freq_array = np.array(pl_freq)
 total_freq_array = np.array(total_freq)
 
-# Replace zeros with NaN for cleaner plotting (to avoid vertical lines)
-bd_freq_array[bd_freq_array == 0] = np.nan
-pl_freq_array[pl_freq_array == 0] = np.nan
-total_freq_array[mass_ratio_values < q_pl_min] = np.nan
-# Cap total curve to start and end with the planet model's domain
-total_freq_array[mass_ratio_values > q_pl_max] = np.nan
+## Replace zeros with NaN for cleaner plotting (to avoid vertical lines)
+#bd_freq_array[bd_freq_array == 0] = np.nan
+#pl_freq_array[pl_freq_array == 0] = np.nan
+#total_freq_array[mass_ratio_values < q_pl_min] = np.nan
+## Cap total curve to start and end with the planet model's domain
+#total_freq_array[mass_ratio_values > q_pl_max] = np.nan
 
 # Plot the frequency distribution dN/dlogq vs log(q)
 log_mass_ratio_values = np.log10(mass_ratio_values)
