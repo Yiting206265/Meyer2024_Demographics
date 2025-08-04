@@ -357,19 +357,6 @@ combined_values = a2_bd_extended + a2_gp_extended
 plt.close('all')  # Close any existing figures
 fig, ax = plt.subplots(figsize=(10, 8))
 
-# Create mass ratio values for plotting with fixed range from 10^-3 to 1
-# Calculate mass ratio range based on companion mass inputs
-min_q = max(Jup_min * q_Jupiter, 1e-5)  # Ensure minimum is at least 10^-3
-max_q = min(Jup_max * q_Jupiter, 1.0)    # Ensure maximum is at most 1.0
-
-# Define the range for orbital distances and mass ratios using correct log_10 ranges
-# Use logarithmic spacing for mass ratio to better sample the distribution
-mass_ratio_values = np.logspace(
-    np.log10(max(Jup_min * q_Jupiter, 1e-5)),  # Ensure minimum is at least 10^-3
-    np.log10(min(Jup_max * q_Jupiter, 1.0)),   # Ensure maximum is at most 1.0
-    1000
-)
-
 # Define functions for mass ratio and orbital separation distributions
 def mass_fctn_bd(q):
     # Exact notebook: q^(-beta) where beta = alpha_bd from slider
@@ -409,8 +396,6 @@ def dN_pl(q):
 # Section 6 - Orbital Separation Range for Frequency Calculations
 ##############################################################################
 
-
-
 # Create columns for orbital separation inputs only
 col1, col2 = st.columns(2)
 
@@ -418,7 +403,7 @@ with col1:
     amin_calc = st.number_input(
         'Minimum Separation (AU)',
         min_value=0.1,
-        max_value=1000.0,
+        max_value=3000.0,
         value=1.0,
         step=0.1,
         help="Minimum orbital separation in AU"
@@ -428,7 +413,7 @@ with col2:
     amax_calc = st.number_input(
         'Maximum Separation (AU)',
         min_value=0.1,
-        max_value=1000.0,
+        max_value=3000.0,
         value=100.0,
         step=0.1,
         help="Maximum orbital separation in AU"
@@ -489,29 +474,13 @@ def f_bd(mass_min_mj, mass_max_mj, sep_min_au, sep_max_au, host_mass_msun):
 
 # Define specific mass ratio ranges for each population
 q_pl_min = 0.03 * q_Jupiter  # Planets: lower mass, lower limit
-q_pl_max = 1
-q_bd_min = 0.03 * q_Jupiter
+q_pl_max = 0.5
+q_bd_min = 3 * q_Jupiter
 q_bd_max = 1
 
 bd_freq = []
 pl_freq = []
 total_freq = []
-
-for q in mass_ratio_values:
-    # Calculate dN/dlog(q) using the corrected dN functions, applying caps
-    # The dN functions now include proper normalization and mass functions
-    bd_val = dN_bd(q) * q * np.log(10) if q_bd_min <= q <= q_bd_max else 0
-    pl_val = dN_pl(q) * q * np.log(10) if q_pl_min <= q <= q_pl_max else 0
-    
-    # Append to arrays
-    bd_freq.append(bd_val)
-    pl_freq.append(pl_val)
-    total_freq.append(bd_val + pl_val)
-
-# Convert lists to numpy arrays for plotting
-bd_freq_array = np.array(bd_freq)
-pl_freq_array = np.array(pl_freq)
-total_freq_array = np.array(total_freq)
 
 ## Replace zeros with NaN for cleaner plotting (to avoid vertical lines)
 #bd_freq_array[bd_freq_array == 0] = np.nan
@@ -520,11 +489,53 @@ total_freq_array = np.array(total_freq)
 ## Cap total curve to start and end with the planet model's domain
 #total_freq_array[mass_ratio_values > q_pl_max] = np.nan
 
+# Define the range for orbital distances and mass ratios using correct log_10 ranges
+# Use logarithmic spacing for mass ratio to better sample the distribution
+
+mass_ratio_values_pl = np.logspace(
+    np.log10(q_pl_min),  # Ensure minimum is at least 10^-3
+    np.log10(q_pl_max),   # Ensure maximum is at most 1.0
+    1000
+)
+
+mass_ratio_values_bd = np.logspace(
+    np.log10(q_bd_min),  # Ensure minimum is at least 10^-3
+    np.log10(q_bd_max),   # Ensure maximum is at most 1.0
+    1000
+)
+
+mass_ratio_values_total = np.logspace(
+    np.log10(q_pl_min),  # Ensure minimum is at least 10^-3
+    np.log10(q_bd_max),   # Ensure maximum is at most 1.0
+    1000
+)
+
+for q in mass_ratio_values_pl:
+    pl_val = dN_pl(q) * q * np.log(10) if q_pl_min <= q <= q_pl_max else 0
+    pl_freq.append(pl_val)
+
+for q in mass_ratio_values_bd:
+    bd_val = dN_bd(q) * q * np.log(10) if q_bd_min <= q <= q_bd_max else 0
+    bd_freq.append(bd_val)
+
+for q in mass_ratio_values_total:
+    # Calculate dN/dlog(q) using the corrected dN functions, applying caps
+    # The dN functions now include proper normalization and mass functions
+    bd_val = dN_bd(q) * q * np.log(10) if q_bd_min <= q <= q_bd_max else 0
+    pl_val = dN_pl(q) * q * np.log(10) if q_pl_min <= q <= q_bd_max else 0
+    
+    # Append to arrays
+    total_freq.append(bd_val + pl_val)
+
+# Convert lists to numpy arrays for plotting
+bd_freq_array = np.array(bd_freq)
+pl_freq_array = np.array(pl_freq)
+total_freq_array = np.array(total_freq)
+
 # Plot the frequency distribution dN/dlogq vs log(q)
-log_mass_ratio_values = np.log10(mass_ratio_values)
-ax.plot(log_mass_ratio_values, pl_freq_array, color='r', linewidth=2, label='Giant Planet Model')
-ax.plot(log_mass_ratio_values, bd_freq_array, color='blue', linewidth=2, label='Brown Dwarf Model')
-ax.plot(log_mass_ratio_values, total_freq_array, color='orange', linewidth=2, label='Total Frequency')
+ax.plot(np.log10(mass_ratio_values_pl), pl_freq_array, color='r', linewidth=2, label='Giant Planet Model')
+ax.plot(np.log10(mass_ratio_values_bd), bd_freq_array, color='blue', linewidth=2, label='Brown Dwarf Model')
+ax.plot(np.log10(mass_ratio_values_total), total_freq_array, color='orange', linewidth=2, label='Total Frequency')
 
 # Configure plot
 ax.set_xlabel('log(q)', fontsize=20, labelpad=10.4)
@@ -536,12 +547,14 @@ try:
     valid_data_mask = ~np.isnan(total_freq_array)
     if np.any(valid_data_mask):
         # Get the x-range where we have valid data
-        valid_x_values = log_mass_ratio_values[valid_data_mask]
-        x_min = np.min(valid_x_values)
-        x_max = np.max(valid_x_values)
+        valid_x_values_pl = np.log10(mass_ratio_values_pl)[valid_data_mask]
+        valid_x_values_bd = np.log10(mass_ratio_values_bd)[valid_data_mask]
+
+        x_min = np.min(valid_x_values_pl)
+        x_max = np.max(valid_x_values_bd)
         # Add some padding (10% on each side) for better visualization
         x_range = x_max - x_min
-        padding = x_range * 0.1
+        padding = x_range * 0.11
         ax.set_xlim(x_min - padding, x_max + padding)
     else:
         # Fallback to default range if no valid data
@@ -554,13 +567,14 @@ try:
     # Find the maximum value of the visible total frequency curve
     max_y = np.nanmax(total_freq_array)
     # Set the y-axis limit to be slightly above the max value for better visualization
-    ax.set_ylim(0, max_y * 1.1)
+    ax.set_ylim(0, max_y * 1.2)
 except ValueError:
     # Default limit if the array is all NaN
     ax.set_ylim(0, 0.3)
-ax.tick_params(axis='both', which='major', labelsize=15)
+    
+ax.tick_params(axis='both', which='major', labelsize=15, labelcolor='black')
 ax.legend(loc='upper right', fontsize=14)
-ax.set_title("Companion Frequency Distribution", fontsize=22)
+ax.set_title("Companion Frequency Distribution", pad=10,fontsize=22)
 
 # Calculate mass ratio limits
 mass_ratio_min = Jup_min * q_Jupiter
@@ -584,8 +598,9 @@ mean_num_pl = f_pl(Jup_min, Jup_max, amin_calc, amax_calc, host_mass)
 mean_num_bd = f_bd(Jup_min, Jup_max, amin_calc, amax_calc, host_mass)
 
 # Display results in Streamlit
-st.write(f"Mean Number of Planets Per Star: {mean_num_pl}")
-st.write(f"Mean Number of Brown Dwarfs Per Star: {mean_num_bd}")
+st.write(f"Mean Number of Planets Per Star: `{mean_num_pl:.10f}`")
+st.write(f"Mean Number of Brown Dwarfs Per Star: `{mean_num_bd:.10f}`")
+
 
 st.write("")
 st.write("*Note: These values represent the expected number of companions per star within the specified mass ratio and orbital separation ranges.*")
