@@ -474,7 +474,7 @@ def f_bd(mass_min_mj, mass_max_mj, sep_min_au, sep_max_au, host_mass_msun):
 
 # Define specific mass ratio ranges for each population
 q_pl_min = 0.03 * q_Jupiter  # Planets: lower mass, lower limit
-q_pl_max = 0.5
+q_pl_max = 0.1
 q_bd_min = 3 * q_Jupiter
 q_bd_max = 1
 
