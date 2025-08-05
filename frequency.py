@@ -524,7 +524,7 @@ for q in mass_ratio_values_total:
     # Calculate dN/dlog(q) using the corrected dN functions, applying caps
     # The dN functions now include proper normalization and mass functions
     bd_val = dN_bd(q) * q * np.log(10) if q_bd_min <= q <= q_bd_max else 0
-    pl_val = dN_pl(q) * q * np.log(10) if q_pl_min <= q <= q_bd_max else 0
+    pl_val = dN_pl(q) * q * np.log(10) if q_pl_min <= q <= q_pl_max else 0
     
     # Append to arrays
     total_freq.append(bd_val + pl_val)
@@ -537,7 +537,8 @@ total_freq_array = np.array(total_freq)
 # Plot the frequency distribution dN/dlogq vs log(q)
 ax.plot(np.log10(mass_ratio_values_pl), pl_freq_array, color='r', linewidth=2, label='Giant Planet Model')
 ax.plot(np.log10(mass_ratio_values_bd), bd_freq_array, color='blue', linewidth=2, label='Brown Dwarf Model')
-ax.plot(np.log10(mass_ratio_values_total), total_freq_array, color='orange', linewidth=2, label='Total Frequency')
+ax.plot(np.log10(mass_ratio_values_total), total_freq_array, color='orange', linewidth=2,linestyle=':', label='Total Frequency')
+
 
 # Configure plot
 ax.set_xlabel('log(q)', fontsize=20, labelpad=10.4)
