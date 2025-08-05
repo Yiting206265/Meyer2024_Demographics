@@ -21,8 +21,8 @@ The application implements a companion population model using log-normal distrib
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/Meyer2024_Demographics.git
-cd Meyer2024_Demographics
+git clone https://github.com/yourusername/Meyer2025_Demographics.git
+cd Meyer2025_Demographics
 
 # Install dependencies
 pip install -r requirements.txt
